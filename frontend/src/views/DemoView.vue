@@ -1,15 +1,8 @@
 <template>
-  <div class="demo-page" lang="en">
-    <nav class="demo-navbar" aria-label="Main navigation">
-      <RouterLink to="/" class="brand">My Own Researcher</RouterLink>
-      <div class="nav-links">
-        <RouterLink to="/">Workspace</RouterLink>
-        <RouterLink to="/demo" aria-current="page" class="active-link">Demo</RouterLink>
-        <a href="https://github.com/Handriantog/My-Own-Researcher" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
-      </div>
-    </nav>
+  <div class="demo-page site-page">
+    <SiteHeader />
 
-    <main class="demo-main">
+    <main class="demo-main" lang="en">
       <header class="demo-hero">
         <div class="hero-copy">
           <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> A saved run, ready to explore</p>
@@ -121,16 +114,19 @@
           </div>
         </div>
 
-        <div class="stage-footer"><span>0{{ activeStep + 1 }} <span class="muted">/ 05</span></span><div><button v-if="activeStep > 0" type="button" class="back-button" @click="advanceStep(activeStep - 1)">← Previous</button><button v-if="activeStep < steps.length - 1" type="button" class="next-button" @click="advanceStep(activeStep + 1)">{{ steps[activeStep + 1].label }} →</button><RouterLink v-else to="/#research" class="next-button">Start your own research →</RouterLink></div></div>
+        <div class="stage-footer"><span>0{{ activeStep + 1 }} <span class="muted">/ 05</span></span><div><button v-if="activeStep > 0" type="button" class="ui-button ui-button-secondary" @click="advanceStep(activeStep - 1)">← Previous</button><button v-if="activeStep < steps.length - 1" type="button" class="ui-button ui-button-primary" @click="advanceStep(activeStep + 1)">{{ steps[activeStep + 1].label }} →</button><RouterLink v-else to="/research" class="ui-button ui-button-primary">Start your own research →</RouterLink></div></div>
       </section>
 
-      <footer class="demo-footer"><div><p class="eyebrow">YOUR QUESTION IS NEXT</p><h2>Bring a document.<br>Explore the possibilities.</h2><p>Your source material and your question shape the next run.</p></div><RouterLink to="/#research" class="primary-link">Start your own research <span aria-hidden="true">↗</span></RouterLink></footer>
+      <footer class="demo-footer"><div><p class="eyebrow">YOUR QUESTION IS NEXT</p><h2>Bring a document.<br>Explore the possibilities.</h2><p>Your source material and your question shape the next run.</p></div><RouterLink to="/research" class="ui-button ui-button-primary">Start your own research <span aria-hidden="true">↗</span></RouterLink></footer>
     </main>
+    <SiteFooter />
   </div>
 </template>
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
+import SiteHeader from '../components/SiteHeader.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { useRoute, useRouter } from 'vue-router'
 import DemoGraph from '../components/demo/DemoGraph.vue'
 import DemoReport from '../components/demo/DemoReport.vue'
@@ -180,12 +176,7 @@ function onTabKey(event, index) {
 </script>
 
 <style scoped>
-.demo-page { --accent: #dc461d; --ink: #20221f; --line: #dddfd7; --muted: #696d64; background: #fafaf7; color: var(--ink); font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; }
-.demo-navbar { min-height: 64px; background: #151714; color: white; padding: 0 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
-.demo-navbar a { color: inherit; text-decoration: none; }
-.brand { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 800; letter-spacing: .02em; }
-.nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
-.nav-links .active-link { border-bottom: 2px solid #fc794e; padding: 22px 0 20px; }
+.demo-page { --accent: #dc461d; --ink: #20221f; --line: #dddfd7; --muted: #696d64; background: #fafaf7; color: var(--ink); font-family: var(--ui-font); min-height: 100vh; }
 .demo-main { max-width: 1320px; margin: 0 auto; padding: 64px 40px 0; }
 .demo-hero { display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 64px; margin-bottom: 46px; }
 .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6; letter-spacing: .11em; text-transform: uppercase; font-weight: 500; color: var(--accent); }
@@ -281,11 +272,8 @@ select { font-family: inherit; max-width: 160px; padding: 7px; border: 1px solid
 .full-report { margin-top: 25px; }.full-report > summary { padding: 15px 0; border-top: 1px solid var(--line); font-weight: 600; }.full-report > summary span { float: right; }
 .stage-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding: 20px 0; font-size: 11px; }
 .muted { color: #92998a; }.stage-footer > div { display: flex; gap: 15px; align-items: center; }
-.back-button { border: 0; background: none; color: #676f5e; cursor: pointer; padding: 10px 0; font-size: 11px; }
-.next-button { display: inline-block; background: #30352a; color: white; padding: 12px 17px; font-size: 11px; text-decoration: none; border: none; cursor: pointer; }
 .demo-footer { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 58px 0; margin-top: 24px; border-top: 1px solid var(--line); }
 .demo-footer h2 { font-size: 32px; font-weight: 500; line-height: 1.15; letter-spacing: -.04em; margin: 15px 0; }.demo-footer div > p:last-child { font-size: 12px; color: var(--muted); }
-.primary-link { background: #dc461d; color: white; padding: 17px 20px; text-decoration: none; font-size: 13px; display: flex; gap: 30px; align-items: center; white-space: nowrap; }
 button:hover, a:hover { filter: brightness(.9); }
 a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid #cc471c; outline-offset: 4px; }
 @media (max-width: 1000px) { .demo-hero { gap: 30px; }.stage-panel { grid-template-columns: 210px minmax(0, 1fr); gap: 30px; }.stage-tabs button { font-size: 11px; padding-right: 12px; padding-left: 12px; }.tab-arrow { display: none; }.scenario-card { padding: 25px; }.stat { padding: 0 17px; } }

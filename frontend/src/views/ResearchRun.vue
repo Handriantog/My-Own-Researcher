@@ -1,6 +1,6 @@
 <template>
   <div class="research-page"><ResearchNav /><main class="research-main run-progress">
-    <div class="research-breadcrumb"><RouterLink to="/">{{ t('research.home') }}</RouterLink><span>→ 03 {{ t('research.research') }}</span></div>
+    <div class="research-breadcrumb"><RouterLink to="/research">{{ t('interface.workspace') }}</RouterLink><span>→ 03 {{ t('research.research') }}</span></div>
     <p v-if="!run && !error" role="status">{{ t('research.loadingRun') }}</p>
     <template v-if="run">
       <header class="research-heading"><div><span class="eyebrow accent" role="status">{{ t(`research.statuses.${run.status}`) }}</span><h1>{{ run.source.question }}</h1><p>{{ t('research.backgroundHelp') }}</p></div></header>

@@ -1,11 +1,11 @@
 <template>
   <dialog ref="dialog" class="settings-dialog" aria-labelledby="settings-title" @close="emit('close')" @click="outside">
-    <div class="settings-panel"><header><div><span class="eyebrow">{{ t('research.defaults') }}</span><h1 id="settings-title">{{ t('research.settings') }}</h1></div><button type="button" class="plain-button" @click="dialog.close()" :aria-label="t('research.close')">✕</button></header>
+    <div class="settings-panel"><header><div><span class="eyebrow">{{ t('research.defaults') }}</span><h1 id="settings-title">{{ t('interface.defaultsTitle') }}</h1></div><button type="button" class="plain-button" @click="dialog.close()" :aria-label="t('research.close')">✕</button></header>
       <p class="form-help">{{ t('research.defaultsHelp') }}</p>
-      <p v-if="loading" role="status">{{ t('research.checking') }}</p>
+      <p v-if="loading" role="status">{{ t('interface.loadingDefaults') }}</p>
       <ResearchSettingsForm v-if="metadata" v-model="chosen" :metadata="metadata" id="defaults" />
       <p v-if="error" class="research-error" role="alert">{{ error }}</p><p v-if="saved" role="status">{{ t('research.saved') }}</p>
-      <button class="primary-action" :disabled="loading || saving || !metadata || !!validateSetup(chosen)" @click="save">{{ t(saving ? 'research.saving' : 'research.saveDefaults') }}</button>
+      <div class="settings-save"><button class="primary-action" :disabled="loading || saving || !metadata || !!validateSetup(chosen)" @click="save">{{ t(saving ? 'research.saving' : 'research.saveDefaults') }}</button></div>
     </div>
   </dialog>
 </template>

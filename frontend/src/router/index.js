@@ -7,6 +7,7 @@ import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
 
 const routes = [
+  { path: '/research', name: 'Workspace', component: () => import('../views/Workspace.vue') },
   { path: '/research/review', name: 'ResearchReview', component: () => import('../views/ResearchReview.vue') },
   { path: '/research/runs/:runId', name: 'ResearchRun', component: () => import('../views/ResearchRun.vue') },
   {
@@ -56,8 +57,15 @@ const router = createRouter({
   routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
-    if (to.path === '/' && to.hash === '#research') return { el: '#research' }
+    if (to.path === '/' && to.hash === '#how-it-works') return { el: '#how-it-works' }
     if (to.path !== from.path) return { top: 0 }
+  }
+})
+
+// Preserve bookmarks and links from older versions of the homepage.
+router.beforeEach(to => {
+  if (to.path === '/' && to.hash === '#research') {
+    return { path: '/research', query: to.query, replace: true }
   }
 })
 
