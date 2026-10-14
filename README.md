@@ -324,6 +324,7 @@ See [per-agent MCP setup](docs/agent-mcp.md) for configuration locations, schema
 
 | I want to… | Go here |
 | --- | --- |
+| Review models, parallelism, estimates, or automatic research | [Research settings guide](docs/research-settings.md) |
 | Configure storage or recover a run | [Workbench guide](docs/my-own-researcher.md) |
 | Tune the default Codex setup | [Codex provider guide](docs/codex-provider.md) |
 | Use a different CLI for inference | [Agent provider guide](docs/agent-providers.md) |

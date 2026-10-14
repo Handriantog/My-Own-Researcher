@@ -14,6 +14,9 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from research_runtime import current_context, Cancellation
+from research_runtime.usage import tracked_request
+
 
 class CodexProviderError(RuntimeError):
     """Safe error suitable for API responses; never includes raw CLI output."""
@@ -43,33 +46,21 @@ def _environment() -> dict[str, str]:
 
 
 @contextmanager
-def _request_slot(cancel_event=None, *, prefix='CODEX', label='Codex'):
+def _request_slot(cancel_event=None, *, prefix='CODEX', label='Codex', provider=None):
+    from research_runtime.slots import request_slot, SlotError
     if os.name != 'posix':
         raise CodexProviderError(f'{label} provider requires macOS or Linux.')
-    import fcntl
-
     default = Path(__file__).resolve().parents[3] / 'backend' / 'uploads' / ('.' + prefix.lower()) / 'requests.lock'
     path = Path(os.environ.get(f'{prefix}_LOCK_PATH', str(default))).expanduser()
     if not path.is_absolute():
         raise CodexProviderError(f'{prefix}_LOCK_PATH must be an absolute path shared by all MiroFish processes.')
-    path = path.resolve()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    deadline = time.monotonic() + _positive_seconds(f'{prefix}_QUEUE_TIMEOUT_SECONDS', '600')
-    descriptor = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+    timeout = _positive_seconds(f'{prefix}_QUEUE_TIMEOUT_SECONDS', '600')
     try:
-        while True:
-            if cancel_event is not None and cancel_event.is_set():
-                raise CodexProviderError(f'{label} request cancelled.')
-            try:
-                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() >= deadline:
-                    raise CodexProviderError(f'{label} request queue timed out. Reduce simultaneous agents and retry.')
-                time.sleep(0.05)
-        yield
-    finally:
-        os.close(descriptor)
+        with request_slot(current_context(), provider or prefix.lower(), path=path,
+                          timeout=timeout, cancel_event=cancel_event) as queued:
+            yield queued
+    except SlotError as error:
+        raise CodexProviderError(str(error)) from error
 
 
 def _run(args: list[str], *, env: dict[str, str], timeout: float,
@@ -116,9 +107,12 @@ def run_codex(prompt: str, schema: dict, cancel_event=None) -> tuple[dict, dict]
     executable = shutil.which(os.environ.get('CODEX_BIN', 'codex'))
     if not executable:
         raise CodexProviderError('Codex CLI not found. Install it, run codex login, or set CODEX_BIN.')
+    context = current_context()
+    cancel_event = Cancellation(context, cancel_event)
     env = _environment()
     timeout = _positive_seconds('CODEX_TIMEOUT_SECONDS', '180')
-    with _request_slot(cancel_event), tempfile.TemporaryDirectory(prefix='mirofish-codex-') as directory:
+    with tracked_request(context) as metrics, _request_slot(cancel_event) as queued, tempfile.TemporaryDirectory(prefix='mirofish-codex-') as directory:
+        metrics['queue_seconds'] = queued
         # Check the auth mode without opening or copying any credential files.
         code, stdout, stderr = _run(
             [executable, '--no-daemon', 'login', 'status'], env=env,
@@ -160,7 +154,7 @@ def run_codex(prompt: str, schema: dict, cancel_event=None) -> tuple[dict, dict]
         ]
         for setting in settings:
             args.extend(['-c', setting])
-        model = os.environ.get('CODEX_MODEL', '').strip()
+        model = context.model if context else os.environ.get('CODEX_MODEL', '').strip()
         if model:
             args.extend(['--model', model])
         args.append('-')
@@ -188,4 +182,5 @@ def run_codex(prompt: str, schema: dict, cancel_event=None) -> tuple[dict, dict]
             result = json.loads(output_path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             raise CodexProviderError('Codex returned an invalid structured response.') from None
+        metrics['usage'] = usage
         return result, usage

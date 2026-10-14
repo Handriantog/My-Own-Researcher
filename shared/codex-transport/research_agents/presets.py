@@ -6,6 +6,7 @@ enables an unrestricted permission mode. User/managed CLI configuration may appl
 import json
 import os
 from pathlib import Path
+from research_runtime import current_context
 
 
 def _write(root: Path, name: str, value) -> str:
@@ -18,7 +19,8 @@ def _write(root: Path, name: str, value) -> str:
 def build_command(provider, prompt: str, schema: dict, root: Path, env: dict):
     executable = os.environ.get('AGENT_BIN', provider.executable)
     name = provider.id
-    model = os.environ.get('AGENT_MODEL', '').strip()
+    context = current_context()
+    model = context.model if context else os.environ.get('AGENT_MODEL', '').strip()
     model_args = ['--model', model] if model else []
     stdin = prompt
     if name == 'claude-code':

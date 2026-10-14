@@ -3,6 +3,7 @@
 接口2：使用Zep API构建Standalone Graph
 """
 
+from research_runtime import ContextThread, current_context
 import hashlib
 import uuid
 import time
@@ -110,7 +111,7 @@ class GraphBuilderService:
         current_locale = get_locale()
 
         # 在后台线程中执行构建
-        thread = threading.Thread(
+        thread = ContextThread(
             target=self._build_graph_worker,
             args=(task_id, text, ontology, graph_name, chunk_size, chunk_overlap, batch_size, current_locale)
         )

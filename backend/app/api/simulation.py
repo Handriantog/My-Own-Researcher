@@ -3,6 +3,7 @@
 Step2: Zep实体读取与过滤、OASIS模拟准备与运行（全程自动化）
 """
 
+from research_runtime import ContextThread, current_context
 import os
 import traceback
 from contextlib import nullcontext
@@ -706,7 +707,7 @@ def prepare_simulation():
                     worker_lock.close()
 
         # 启动后台线程
-        thread = threading.Thread(target=run_prepare, daemon=True)
+        thread = ContextThread(target=run_prepare, daemon=True)
         try:
             thread.start()
         except Exception:

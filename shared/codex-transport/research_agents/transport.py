@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from research_runtime import current_context, Cancellation
+from research_runtime.usage import tracked_request
 
 import jsonschema
 
@@ -122,6 +124,8 @@ def run_agent(prompt: str, schema: dict, cancel_event=None, *, provider=None) ->
     selected = validate_provider(provider)
     if selected.id == 'codex':
         return run_codex(prompt, schema, cancel_event=cancel_event)
+    context = current_context()
+    cancel_event = Cancellation(context, cancel_event)
     jsonschema.Draft202012Validator.check_schema(schema)
     command = _command_override()
     timeout = _positive_seconds('AGENT_TIMEOUT_SECONDS', '180')
@@ -131,15 +135,16 @@ def run_agent(prompt: str, schema: dict, cancel_event=None, *, provider=None) ->
         'for the host application to validate and execute. Do not add Markdown fences or commentary.\n'
         'Output JSON Schema: ' + json.dumps(schema, ensure_ascii=False) + '\n\n' + prompt
     )
-    with _request_slot(cancel_event, prefix='AGENT', label=selected.name), tempfile.TemporaryDirectory(
+    with tracked_request(context) as metrics, _request_slot(cancel_event, prefix='AGENT', label=selected.name, provider=selected.id) as queued, tempfile.TemporaryDirectory(
         prefix='mirofish-agent-'
     ) as directory:
+        metrics['queue_seconds'] = queued
         env = _agent_environment()
         if command:
             args, output_format, stdin = command, 'raw', instruction
             # A wrapper can read these without exposing prompts in the process list.
             env['MIROFISH_AGENT_PROVIDER'] = selected.id
-            env['MIROFISH_AGENT_MODEL'] = os.environ.get('AGENT_MODEL', '')
+            env['MIROFISH_AGENT_MODEL'] = (context.model or '') if context else os.environ.get('AGENT_MODEL', '')
         else:
             from .presets import build_command
             args, output_format, stdin = build_command(selected, instruction, schema, Path(directory), env)
@@ -157,4 +162,5 @@ def run_agent(prompt: str, schema: dict, cancel_event=None, *, provider=None) ->
             jsonschema.validate(result, schema)
         except jsonschema.ValidationError:
             raise ProviderError(f'{selected.name} returned an invalid response envelope.') from None
+        metrics['usage'] = usage
         return result, usage

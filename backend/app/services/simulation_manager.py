@@ -211,6 +211,7 @@ class SimulationManager:
         graph_id: str,
         enable_twitter: bool = True,
         enable_reddit: bool = True,
+        simulation_id: str = None,
     ) -> SimulationState:
         """
         创建新的模拟
@@ -225,7 +226,7 @@ class SimulationManager:
             SimulationState
         """
         import uuid
-        simulation_id = f"sim_{uuid.uuid4().hex[:12]}"
+        simulation_id = simulation_id or f"sim_{uuid.uuid4().hex[:12]}"
         
         state = SimulationState(
             simulation_id=simulation_id,

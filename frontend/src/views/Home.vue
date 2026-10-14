@@ -4,6 +4,7 @@
     <nav class="navbar">
       <div class="nav-brand">My Own Researcher</div>
       <div class="nav-links">
+        <button class="nav-settings" @click="settingsOpen = true">{{ $t('research.settings') }}</button>
         <RouterLink to="/demo" class="demo-nav-link">{{ $t('nav.demo') }}</RouterLink>
         <LanguageSwitcher />
         <a href="https://github.com/Handriantog/My-Own-Researcher" target="_blank" rel="noopener noreferrer" class="github-link">
@@ -11,8 +12,10 @@
         </a>
       </div>
     </nav>
+    <ResearchSettingsPanel v-if="settingsOpen" @close="settingsOpen = false" />
 
     <div class="main-content">
+      <RouterLink v-if="lastResearchRun" :to="`/research/runs/${lastResearchRun}`" class="last-research-link">{{ $t('research.returnToRun') }} →</RouterLink>
       <!-- 上半部分：Hero 区域 -->
       <section class="hero-section">
         <div class="hero-left">
@@ -195,7 +198,7 @@
                 @click="startSimulation"
                 :disabled="!canSubmit || loading"
               >
-                <span v-if="!loading">{{ $t('home.startEngine') }}</span>
+                <span v-if="!loading">{{ $t('research.reviewAction') }}</span>
                 <span v-else>{{ $t('home.initializing') }}</span>
                 <span class="btn-arrow">→</span>
               </button>
@@ -236,6 +239,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import ResearchSettingsPanel from '../components/ResearchSettingsPanel.vue'
+import { getPendingUpload } from '../store/pendingUpload'
+const settingsOpen = ref(false)
+const savedRun = localStorage.getItem('lastResearchRun')
+const lastResearchRun = /^run_[a-f0-9]{32}$/.test(savedRun || '') ? savedRun : null
 
 const router = useRouter()
 const { t } = useI18n()
@@ -278,11 +286,11 @@ onUnmounted(() => clearInterval(statusTimer))
 
 // 表单数据
 const formData = ref({
-  simulationRequirement: ''
+  simulationRequirement: getPendingUpload().simulationRequirement || ''
 })
 
 // 文件列表
-const files = ref([])
+const files = ref([...getPendingUpload().files])
 
 // 状态
 const loading = ref(false)
@@ -361,8 +369,7 @@ const startSimulation = () => {
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
-      name: 'Process',
-      params: { projectId: 'new' }
+      name: 'ResearchReview'
     })
   })
 }

@@ -12,6 +12,8 @@ import uuid
 from types import SimpleNamespace
 
 import jsonschema
+from research_runtime import current_context, inference_scope
+from research_runtime.usage import normalize_usage
 from openai.types.chat import ChatCompletion
 
 from research_agents import ProviderError, get_provider, model_name, run_agent
@@ -39,6 +41,7 @@ class AgentClient:
     """Small Chat Completions-compatible surface; no network API client."""
 
     def __init__(self, provider=None):
+        self.inference_context = current_context()
         self.provider = get_provider(provider).id
         self.chat = SimpleNamespace(completions=self)
 
@@ -115,7 +118,8 @@ class AgentClient:
             )
         if format_type != 'text':
             prompt += '\nThe content STRING must itself encode valid JSON matching the requested format.'
-        result, usage = self._infer(prompt, schema, cancel_event=_cancel_event)
+        with inference_scope(self.inference_context):
+            result, usage = self._infer(prompt, schema, cancel_event=_cancel_event)
         try:
             jsonschema.validate(result, schema)
         except (jsonschema.ValidationError, TypeError):
@@ -161,12 +165,14 @@ class AgentClient:
                 raise ValueError()
         except (AttributeError, TypeError, ValueError, OverflowError):
             raise ProviderError('Agent returned invalid token usage.') from None
+        normalized = normalize_usage(usage)
+        reported = normalized['input_tokens'] is not None and normalized['output_tokens'] is not None
         return ChatCompletion(
             id='chatcmpl-' + self.provider + '-' + uuid.uuid4().hex, object='chat.completion',
-            created=int(time.time()), model=model_name(self.provider),
+            created=int(time.time()), model=(self.inference_context.model if self.inference_context else None) or model_name(self.provider),
             choices=[{'index': 0, 'finish_reason': 'tool_calls' if converted else 'stop',
                       'message': {'role': 'assistant', 'content': content or None,
                                   'tool_calls': converted or None}}],
             usage={'prompt_tokens': prompt_tokens, 'completion_tokens': completion_tokens,
-                   'total_tokens': prompt_tokens + completion_tokens},
+                   'total_tokens': prompt_tokens + completion_tokens} if reported else None,
         )

@@ -187,6 +187,9 @@ class GraphStore:
                     raise ValueError('Episode data must be nonempty text')
                 eid = str(uuid.uuid5(uuid.NAMESPACE_URL, f'{batch_id}:{index}'))
                 payload = {**item, 'created_at': item.get('created_at') or now()}
+                inference = json.loads(batch['metadata']).get('inference_context')
+                if inference:
+                    payload['inference_context'] = inference
                 db.execute('INSERT INTO episodes VALUES (?,?,?,?,?,?,?,?)',
                            (eid, batch['graph_id'], batch_id, index, json.dumps(payload), 'draft', None, now()))
                 ids.append(eid)
@@ -245,6 +248,8 @@ class GraphStore:
                         eid = str(uuid.uuid5(uuid.NAMESPACE_URL, f'{batch_id}:{index}'))
                         payload = {'graph_id': batch['graph_id'], 'data': chunks[index], 'data_type': 'text',
                                    'source_description': 'MiroFish source document chunk', 'created_at': now()}
+                        if metadata.get('inference_context'):
+                            payload['inference_context'] = metadata['inference_context']
                         db.execute('INSERT INTO episodes VALUES (?,?,?,?,?,?,?,?)',
                                    (eid, batch['graph_id'], batch_id, index, json.dumps(payload), 'draft', None, now()))
                     count = len(chunks)
@@ -309,3 +314,34 @@ class GraphStore:
             ids = [r[0] for r in db.execute("SELECT id FROM episodes WHERE state='running'")]
         for eid in ids:
             self.finish(eid, error='Ingestion interrupted. Resume to reconcile saved work and retry unfinished episodes.')
+
+
+    def inference_context(self, value):
+        from dataclasses import replace
+        from research_runtime import InferenceContext
+        context = InferenceContext.from_dict(value)
+        if context is None:
+            return None
+        root = self.path.parent / 'inference' / context.run_id
+        root.mkdir(parents=True, exist_ok=True)
+        return replace(context, usage_path=str(root / 'usage.sqlite3'), stop_path=str(root / 'stop'))
+
+    def run_usage(self, run_id):
+        from research_runtime import InferenceContext
+        from research_runtime.usage import usage_records
+        context = self.inference_context(InferenceContext(run_id, 'codex').to_dict())
+        return usage_records(context.usage_path)
+
+    def stop_run(self, run_id, stopped=True):
+        from research_runtime import InferenceContext
+        context = self.inference_context(InferenceContext(run_id, 'codex').to_dict())
+        marker = Path(context.stop_path)
+        if stopped:
+            marker.touch()
+            with self.connection(write=True) as db:
+                rows = db.execute("SELECT id,payload FROM episodes WHERE state='queued'").fetchall()
+                for row in rows:
+                    if json.loads(row['payload']).get('inference_context', {}).get('run_id') == run_id:
+                        db.execute("UPDATE episodes SET state='canceled', error='Research stopped by user' WHERE id=?", (row['id'],))
+        else:
+            marker.unlink(missing_ok=True)

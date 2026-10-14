@@ -7,6 +7,8 @@ import ReportView from '../views/ReportView.vue'
 import InteractionView from '../views/InteractionView.vue'
 
 const routes = [
+  { path: '/research/review', name: 'ResearchReview', component: () => import('../views/ResearchReview.vue') },
+  { path: '/research/runs/:runId', name: 'ResearchRun', component: () => import('../views/ResearchRun.vue') },
   {
     path: '/demo',
     name: 'Demo',

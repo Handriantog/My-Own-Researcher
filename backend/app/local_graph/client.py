@@ -1,6 +1,10 @@
 """Internal Zep-shaped facade for My Own Researcher's local graph API."""
 
 from types import SimpleNamespace
+from dataclasses import replace
+import os
+from research_runtime import current_context
+from research_agents import graph_provider
 from urllib.parse import urlparse
 
 import httpx
@@ -32,6 +36,15 @@ class LocalGraphClient:
         self.batch = Batch(self)
 
     def call(self, operation, **params):
+        context = current_context()
+        if context and operation in {'batch.create', 'graph.add'}:
+            provider = getattr(context, 'graph_provider', None) or (os.environ.get('GRAPH_LLM_PROVIDER', '').strip() or (context.provider if context.provider != 'openai' else graph_provider()))
+            model = getattr(context, 'graph_model', None) or os.environ.get('CODEX_MODEL' if provider == 'codex' else 'AGENT_MODEL') or None
+            portable = replace(context.for_provider(provider, model), usage_path=None, stop_path=None).to_dict()
+            if operation == 'batch.create':
+                params['metadata'] = dict(params.get('metadata', {}), inference_context=portable)
+            else:
+                params['inference_context'] = portable
         response = self.http.post('/v1/rpc', json={'operation': operation, 'params': params})
         if response.status_code == 404:
             raise NotFoundError(body=response.json())

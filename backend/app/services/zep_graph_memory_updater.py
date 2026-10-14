@@ -3,6 +3,7 @@ Zep图谱记忆更新服务
 将模拟中的Agent活动动态更新到Zep图谱中
 """
 
+from research_runtime import ContextThread, current_context
 import time
 import threading
 import json
@@ -304,7 +305,7 @@ class ZepGraphMemoryUpdater:
         current_locale = get_locale()
 
         self._running = True
-        self._worker_thread = threading.Thread(
+        self._worker_thread = ContextThread(
             target=self._worker_loop,
             args=(current_locale,),
             daemon=True,

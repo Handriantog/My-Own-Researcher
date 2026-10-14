@@ -3,6 +3,7 @@ OASIS模拟运行器
 在后台运行模拟并记录每个Agent的动作，支持实时状态监控
 """
 
+from research_runtime import ContextThread, current_context
 import os
 import sys
 import json
@@ -599,6 +600,9 @@ class SimulationRunner:
             # 设置子进程环境变量，确保 Windows 上使用 UTF-8 编码
             # 这可以修复第三方库（如 OASIS）读取文件时未指定编码的问题
             env = os.environ.copy()
+            inference_context = current_context()
+            if inference_context:
+                env = inference_context.environment(env)
             env['PYTHONUTF8'] = '1'  # Python 3.7+ 支持，让所有 open() 默认使用 UTF-8
             env['PYTHONIOENCODING'] = 'utf-8'  # 确保 stdout/stderr 使用 UTF-8
             
@@ -619,7 +623,7 @@ class SimulationRunner:
             # Capture locale before spawning monitor thread
             current_locale = get_locale()
 
-            monitor_thread = threading.Thread(
+            monitor_thread = ContextThread(
                 target=cls._monitor_simulation,
                 args=(simulation_id, current_locale),
                 daemon=True
@@ -1111,7 +1115,7 @@ class SimulationRunner:
                     with cls._finalization_lock(simulation_id):
                         cls._stop_threads.pop(simulation_id, None)
 
-            worker = threading.Thread(target=finish_stop, daemon=True)
+            worker = ContextThread(target=finish_stop, daemon=True)
             cls._stop_threads[simulation_id] = worker
             try:
                 worker.start()
