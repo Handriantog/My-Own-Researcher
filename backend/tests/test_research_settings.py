@@ -68,6 +68,11 @@ for line in sys.stdin:
     request=json.loads(line)
     with open({str(log)!r},'a') as f:f.write(json.dumps(request)+'\\n')
     if 'id' in request:
+        # Codex 0.157.1's generated ClientRequest schema requires null/omitted
+        # params here. Reject malformed requests like the real server does.
+        if request['method']=='account/gatewayOAuth/read' and request.get('params') is not None:
+            print(json.dumps({{'id':request['id'],'error':{{'code':-32600,'message':'Invalid request: invalid type: map, expected unit'}}}}),flush=True)
+            continue
         result={{'data':[{{'model':'available-model','displayName':'Available'}}]}} if request['method']=='model/list' else {{}}
         print(json.dumps({{'id':request['id'],'result':result}}),flush=True)
 ''')
@@ -97,3 +102,28 @@ def test_refinement_uses_observed_sizes_from_the_selected_model_only():
     records += [{'provider':'codex','model':'other','input_tokens':999999,'output_tokens':1000}]
     assert request_observations(records,chosen)['request_token_range']==[4500,32000]
     assert request_observations(records[:1],chosen)=={}
+
+
+def test_codex_discovery_falls_back_to_cli_catalog_without_claiming_account_access(monkeypatch):
+    import subprocess
+    from app.services import research_settings as service
+    monkeypatch.setattr(service,'configured_provider',lambda:'codex')
+    monkeypatch.setattr(service,'configured_model',lambda provider:None)
+    monkeypatch.setattr(service.shutil,'which',lambda binary:'/test/codex')
+    monkeypatch.setattr(service,'_codex_catalog',lambda binary:(_ for _ in ()).throw(ValueError('Metadata unavailable')))
+    calls=[]
+    def run(args,**kwargs):
+        calls.append(args)
+        assert kwargs['timeout']<=5
+        if args[-2:]==['login','status']:
+            return subprocess.CompletedProcess(args,0,'Logged in using ChatGPT','')
+        assert args[-2:]==['debug','models']
+        return subprocess.CompletedProcess(args,0,json.dumps({'models':[
+            {'slug':'gpt-6-astra','display_name':'GPT-6-Astra','visibility':'list'},
+            {'slug':'internal-hidden','display_name':'Hidden','visibility':'hide'}]}),'')
+    monkeypatch.setattr(service.subprocess,'run',run)
+    result=service.provider_metadata()
+    assert result['models']==[{'id':'gpt-6-astra','name':'GPT-6-Astra','source':'catalog'}]
+    assert result['connection']=='connected'
+    assert result['discovery']=='catalog'
+    assert len(calls)==2

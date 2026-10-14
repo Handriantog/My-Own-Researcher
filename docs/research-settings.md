@@ -23,6 +23,9 @@ login and credentials remain managed through the existing CLI/environment setup.
   the estimated total workload.
 - Model choices come from bounded metadata discovery where supported: Codex
   app-server inventory or the configured OpenAI-compatible API's model list.
+  If Codex app-server discovery fails, its metadata-only `debug models` command
+  supplies a separately labeled CLI catalog. It may be cached/bundled and does
+  not prove account access to every model. Hidden catalog entries are excluded.
   Configured/default/custom choices remain available when discovery is unsupported.
   Installed, connected, unknown, and unavailable are distinct states. Discovery
   does not make a model request or start a login flow. Provider errors stop the run;

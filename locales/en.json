@@ -855,6 +855,7 @@
       "partial": "Partial usage coverage",
       "complete": "All recorded requests reported tokens"
     },
-    "returnToRun": "Return to your latest research"
+    "returnToRun": "Return to your latest research",
+    "modelsCatalog": "Models reported by your Codex CLI. This list may be cached; access to a selected model is confirmed when you run it."
   }
 }

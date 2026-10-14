@@ -854,6 +854,7 @@
       "partial": "仅覆盖部分请求",
       "complete": "所有已记录请求均上报了用量"
     },
-    "returnToRun": "返回最近的研究"
+    "returnToRun": "返回最近的研究",
+    "modelsCatalog": "模型列表来自本机 Codex CLI，可能使用缓存。所选模型的实际访问权限将在运行时确认。"
   }
 }

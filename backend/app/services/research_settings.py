@@ -100,7 +100,7 @@ def _codex_catalog(binary, timeout=6):
                 'capabilities':{'experimentalApi':True, 'explicitGatewayOauth':True}}})
             receive(1)
             send({'method':'initialized','params':{}})
-            send({'id':3,'method':'account/gatewayOAuth/read','params':{'refreshToken':False}})
+            send({'id':3,'method':'account/gatewayOAuth/read','params':None})
             receive(3)
             send({'id':2,'method':'model/list','params':{'limit':100,'includeHidden':False}})
             result = receive(2)
@@ -116,6 +116,24 @@ def _codex_catalog(binary, timeout=6):
                 process.wait()
             process.stdin.close()
             process.stdout.close()
+
+
+def _codex_cli_catalog(binary):
+    """Codex's metadata-only catalog command; may use a cached/bundled catalog.
+
+    Keep this distinct from a verified account entitlement or inference probe.
+    Older CLIs without this command leave discovery unavailable.
+    """
+    result = subprocess.run([binary, '--no-daemon', 'debug', 'models'],
+        capture_output=True, text=True, timeout=5, env=_environment())
+    if result.returncode != 0 or len(result.stdout) > 2_000_000:
+        raise ValueError('Codex model catalog is unavailable')
+    data = json.loads(result.stdout)
+    if not isinstance(data, dict) or not isinstance(data.get('models'), list):
+        raise ValueError('Unexpected Codex model catalog')
+    return [{'id':model['slug'], 'name':model.get('display_name') or model['slug'], 'source':'catalog'}
+        for model in data['models'] if isinstance(model, dict) and isinstance(model.get('slug'), str)
+        and model['slug'] and model.get('visibility') == 'list']
 
 
 def provider_metadata():
@@ -157,6 +175,11 @@ def provider_metadata():
                     result['discovery'] = 'available'
                 except (OSError, ValueError, TimeoutError):
                     result['discovery'] = 'unavailable'
+                    try:
+                        result['models'] = _codex_cli_catalog(binary)
+                        result['discovery'] = 'catalog'
+                    except (OSError, ValueError, subprocess.TimeoutExpired):
+                        pass
     configured = result['configured_model']
     if configured and configured not in {m['id'] for m in result['models']}:
         result['models'].insert(0, {'id':configured,'name':configured,'source':'configured'})

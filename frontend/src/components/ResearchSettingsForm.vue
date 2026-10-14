@@ -18,7 +18,7 @@
         <label class="custom-label" :for="`${id}-custom`">{{ t('research.modelId') }}</label>
         <input :id="`${id}-custom`" type="text" :value="modelValue.model || ''" maxlength="200" autocomplete="off" @input="update('model', $event.target.value)" :placeholder="t('research.modelPlaceholder')" />
       </template>
-      <p class="form-help">{{ t(metadata.provider.discovery === 'available' ? 'research.modelsDiscovered' : 'research.modelsUnknown') }}</p>
+      <p class="form-help">{{ t(metadata.provider.discovery === 'available' ? 'research.modelsDiscovered' : metadata.provider.discovery === 'catalog' ? 'research.modelsCatalog' : 'research.modelsUnknown') }}</p>
     </div>
     <div class="setting-row">
       <div class="label-line"><label :for="`${id}-parallel`">{{ t('research.parallel') }}</label><output :for="`${id}-parallel`">{{ t('research.atOnce', { count: modelValue.concurrency }) }}</output></div>
