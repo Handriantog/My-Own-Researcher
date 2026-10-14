@@ -4,6 +4,7 @@ import asyncio
 import fcntl
 import logging
 import os
+from research_runtime import inference_scope
 
 from .task_scope import ingestion_tasks
 
@@ -36,8 +37,10 @@ class GraphRuntime:
                 continue
             try:
                 timeout = float(os.environ.get('LOCAL_GRAPH_EPISODE_TIMEOUT_SECONDS', '1800'))
-                async with ingestion_tasks(), asyncio.timeout(timeout):
-                    await self.engine.ingest(job, self.store.graph(job['graph_id'])['ontology'])
+                context = self.store.inference_context(job.get('inference_context'))
+                with inference_scope(context):
+                    async with ingestion_tasks(), asyncio.timeout(timeout):
+                        await self.engine.ingest(job, self.store.graph(job['graph_id'])['ontology'])
             except asyncio.CancelledError:
                 self.store.finish(job['uuid'], error='Ingestion interrupted during shutdown. Resume this operation.')
                 raise

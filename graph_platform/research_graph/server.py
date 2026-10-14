@@ -59,6 +59,7 @@ def create_app(store, engine, token):
                 'storage': 'neo4j',
                 'inference': getattr(getattr(engine, 'llm', None), 'provider', None) or graph_provider(),
                 'search': 'local',
+                'inference_context_version': 1,
                 'llm_calls': getattr(getattr(engine, 'llm', None), 'calls', 0)}
 
     @app.post('/v1/rpc')
@@ -68,6 +69,11 @@ def create_app(store, engine, token):
         p = body.params
         op = body.operation
         try:
+            if op == 'research.usage':
+                return {'calls': store.run_usage(p['run_id'])}
+            if op == 'research.stop':
+                store.stop_run(p['run_id'], p.get('stopped', True))
+                return {'saved': True}
             if op == 'graph.create':
                 return store.create_graph(p['graph_id'], p.get('name', ''), p.get('description', ''))
             if op == 'graph.get':

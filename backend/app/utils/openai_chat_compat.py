@@ -7,6 +7,10 @@ gracefully adapting request parameters for GPT-5 family models.
 
 from __future__ import annotations
 
+from research_runtime import current_context
+from research_runtime.usage import tracked_request
+from research_codex.transport import _request_slot
+
 from typing import Any, Dict, List, Optional
 
 
@@ -35,6 +39,9 @@ def create_chat_completion(
     - Preserve the legacy request shape for every non-GPT-5 model/provider.
     - Propagate provider errors unchanged instead of guessing from message text.
     """
+    context = current_context()
+    if context and context.model:
+        model = context.model
     kwargs: Dict[str, Any] = {
         "model": model,
         "messages": messages,
@@ -54,7 +61,13 @@ def create_chat_completion(
         else:
             kwargs["max_tokens"] = max_tokens
 
-    return client.chat.completions.create(**kwargs)
+    if getattr(client, 'provider', None):  # CLI transport owns its slots and telemetry.
+        return client.chat.completions.create(**kwargs)
+    with tracked_request(context) as metrics, _request_slot(prefix='OPENAI', label='OpenAI') as queued:
+        metrics['queue_seconds'] = queued
+        response = client.chat.completions.create(**kwargs)
+        metrics['usage'] = getattr(response, 'usage', None)
+        return response
 
 
 def extract_chat_completion_text(response: Any) -> str:

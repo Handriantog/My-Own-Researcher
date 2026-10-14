@@ -1,0 +1,10 @@
+import service from './index'
+export const getSettings = () => service.get('/api/research/settings', { timeout: 20000 })
+export const saveSettings = settings => service.put('/api/research/settings', settings)
+export const createDraft = data => service.post('/api/research/drafts', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+export const getDraft = id => service.get(`/api/research/drafts/${id}`)
+export const getReviewProject = id => service.get(`/api/research/projects/${id}`)
+export const estimateResearch = data => service.post('/api/research/estimate', data)
+export const startResearch = data => service.post('/api/research/runs', data)
+export const getResearch = id => service.get(`/api/research/runs/${id}`)
+export const controlResearch = (id, action) => service.post(`/api/research/runs/${id}/${action}`, {})

@@ -3,6 +3,7 @@ Report API路由
 提供模拟报告生成、获取、对话等接口
 """
 
+from research_runtime import ContextThread, current_context
 import os
 import traceback
 import threading
@@ -349,7 +350,7 @@ def generate_report():
                 pending.error = None
                 pending.run_summary = run_summary
                 ReportManager.save_report(pending)
-                thread = threading.Thread(target=run_generate, daemon=True)
+                thread = ContextThread(target=run_generate, daemon=True)
                 thread.start()
             except Exception:
                 _active_report_tasks.pop(simulation_id, None)

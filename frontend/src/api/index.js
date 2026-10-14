@@ -1,5 +1,9 @@
 import axios from 'axios'
 import i18n from '../i18n'
+import { reviewLocation } from '../utils/researchSetup'
+
+let navigateToReview = () => {}
+export function registerReviewNavigation(navigate) { navigateToReview = navigate }
 
 // 创建axios实例
 const service = axios.create({
@@ -14,6 +18,7 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     config.headers['Accept-Language'] = i18n.global.locale.value
+    config.headers['X-Research-Client'] = 'browser'
     return config
   },
   error => {
@@ -39,6 +44,8 @@ service.interceptors.response.use(
   },
   error => {
     console.error('Response error:', error)
+    const location = reviewLocation(error.response?.data)
+    if (location) navigateToReview(location)
     const apiError = error.response?.data?.error || error.response?.data?.message
     
     // 处理超时

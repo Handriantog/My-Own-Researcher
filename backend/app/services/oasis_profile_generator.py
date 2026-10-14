@@ -8,6 +8,7 @@ OASIS Agent Profile生成器
 3. 区分个人实体和抽象群体实体
 """
 
+from research_runtime import contextual_call
 import json
 import os
 import tempfile
@@ -20,6 +21,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from openai import OpenAI
+from research_runtime import current_context
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.locale import get_language_instruction, get_locale, set_locale, t
@@ -271,10 +273,11 @@ class OasisProfileGenerator:
     ):
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
-        self.model_name = model_name or Config.LLM_MODEL_NAME
+        context = current_context()
+        self.model_name = (context.model if context else None) or model_name or Config.LLM_MODEL_NAME
         
         from ..utils.provider_factory import create_agent_client
-        self.client = create_agent_client(Config.LLM_PROVIDER)
+        self.client = create_agent_client(current_context().provider if current_context() else Config.LLM_PROVIDER)
         if self.client is None:
             if not self.api_key:
                 raise ValueError("LLM_API_KEY 未配置")
@@ -429,8 +432,8 @@ class OasisProfileGenerator:
         try:
             # 并行执行edges和nodes搜索
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                edge_future = executor.submit(search_edges)
-                node_future = executor.submit(search_nodes)
+                edge_future = executor.submit(contextual_call(search_edges))
+                node_future = executor.submit(contextual_call(search_nodes))
                 
                 # 获取结果
                 # Each request already has the configured HTTP timeout and
@@ -1023,7 +1026,7 @@ class OasisProfileGenerator:
 
         error = None
         with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, parallel_count)) as executor:
-            futures = {executor.submit(generate, idx, entity): idx
+            futures = {executor.submit(contextual_call(generate, idx, entity)): idx
                        for idx, entity in enumerate(entities) if profiles[idx] is None}
             for future in concurrent.futures.as_completed(futures):
                 if future.cancelled():

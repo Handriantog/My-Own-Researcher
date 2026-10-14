@@ -34,6 +34,8 @@ class Project:
     
     # Idempotency key for browser upload retries.
     upload_id: Optional[str] = None
+    research_run_id: Optional[str] = None
+    research_settings: Optional[dict] = None
 
     # 文件信息
     files: List[Dict[str, str]] = field(default_factory=list)  # [{filename, path, size}]
@@ -64,6 +66,8 @@ class Project:
         return {
             "project_id": self.project_id,
             "upload_id": self.upload_id,
+            "research_run_id": self.research_run_id,
+            "research_settings": self.research_settings,
             "name": self.name,
             "status": self.status.value if isinstance(self.status, ProjectStatus) else self.status,
             "created_at": self.created_at,
@@ -94,6 +98,8 @@ class Project:
         return cls(
             project_id=data['project_id'],
             upload_id=data.get('upload_id'),
+            research_run_id=data.get('research_run_id'),
+            research_settings=data.get('research_settings'),
             name=data.get('name', 'Unnamed Project'),
             status=status,
             created_at=data.get('created_at', ''),
@@ -147,7 +153,7 @@ class ProjectManager:
         return os.path.join(cls._get_project_dir(project_id), 'extracted_text.txt')
     
     @classmethod
-    def create_project(cls, name: str = "Unnamed Project") -> Project:
+    def create_project(cls, name: str = "Unnamed Project", project_id: str = None) -> Project:
         """
         创建新项目
         
@@ -159,7 +165,7 @@ class ProjectManager:
         """
         cls._ensure_projects_dir()
         
-        project_id = f"proj_{uuid.uuid4().hex[:12]}"
+        project_id = project_id or f"proj_{uuid.uuid4().hex[:12]}"
         now = datetime.now().isoformat()
         
         project = Project(

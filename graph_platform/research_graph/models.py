@@ -5,6 +5,7 @@ import json
 import math
 import os
 import threading
+from research_runtime import current_context
 
 # Set before importing Graphiti: its default vector dimension is read at import.
 os.environ['GRAPHITI_TELEMETRY_ENABLED'] = 'false'
@@ -30,7 +31,7 @@ class AgentGraphClient(LLMClient):
         self.calls = 0
 
     def _infer(self, prompt, schema, cancel_event=None):
-        return run_agent(prompt, schema, cancel_event=cancel_event, provider=self.provider)
+        return run_agent(prompt, schema, cancel_event=cancel_event, provider=current_context().provider if current_context() else self.provider)
 
     async def _generate_response(self, messages, response_model=None, max_tokens=16384,
                                  model_size=ModelSize.medium):
@@ -69,6 +70,8 @@ class CodexGraphClient(AgentGraphClient):
         super().__init__('codex')
 
     def _infer(self, prompt, schema, cancel_event=None):
+        if current_context() and current_context().provider != 'codex':
+            return super()._infer(prompt, schema, cancel_event)
         return run_codex(prompt, schema, cancel_event=cancel_event)
 
 

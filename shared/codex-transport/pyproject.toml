@@ -10,4 +10,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["research_codex", "research_agents"]
+packages = ["research_codex", "research_agents", "research_runtime"]

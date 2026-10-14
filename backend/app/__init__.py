@@ -53,8 +53,7 @@ def create_app(config_class=Config):
     def log_request():
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
-        if request.content_type and 'json' in request.content_type:
-            logger.debug(f"请求体: {request.get_json(silent=True)}")
+        # Request bodies can contain private research sources; log metadata only.
     
     @app.after_request
     def log_response(response):
@@ -69,6 +68,12 @@ def create_app(config_class=Config):
     app.register_blueprint(report_bp, url_prefix='/api/report')
     from .local_graph.routing import check_project_provider
     app.before_request(check_project_provider)
+    from .api.research import research_bp, bind_reviewed_inference, unbind_reviewed_inference
+    from .services.research_runs import ResearchRuns
+    app.extensions['research_runs'] = ResearchRuns(app)
+    app.register_blueprint(research_bp, url_prefix='/api/research')
+    app.before_request(bind_reviewed_inference)
+    app.teardown_request(unbind_reviewed_inference)
     
     # 健康检查
     @app.route('/health')

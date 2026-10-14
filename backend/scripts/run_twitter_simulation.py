@@ -434,8 +434,8 @@ class TwitterSimulationRunner:
         - LLM_BASE_URL: API基础URL
         - LLM_MODEL_NAME: 模型名称
         """
-        from app.utils.provider_factory import create_agent_model
-        agent_model = create_agent_model()
+        from app.utils.provider_factory import create_agent_model, create_reviewed_openai_model
+        agent_model = create_agent_model() or create_reviewed_openai_model()
         if agent_model is not None:
             return agent_model
 

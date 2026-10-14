@@ -8,6 +8,7 @@ import logging
 import re
 from typing import Optional, Dict, Any, List
 from openai import OpenAI
+from research_runtime import current_context, inference_scope
 
 from ..config import Config
 from .openai_chat_compat import create_chat_completion, extract_chat_completion_text
@@ -97,12 +98,14 @@ class LLMClient:
         base_url: Optional[str] = None,
         model: Optional[str] = None
     ):
+        self.inference_context = current_context()
+        self.provider = self.inference_context.provider if self.inference_context else Config.LLM_PROVIDER
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
-        self.model = model or Config.LLM_MODEL_NAME
+        self.model = (self.inference_context.model if self.inference_context else None) or model or Config.LLM_MODEL_NAME
         
         from .provider_factory import create_agent_client
-        self.client = create_agent_client(Config.LLM_PROVIDER)
+        self.client = create_agent_client(self.provider)
         if self.client is None:
             if not self.api_key:
                 raise ValueError("LLM_API_KEY 未配置")
@@ -118,14 +121,9 @@ class LLMClient:
     ) -> Any:
         """Send one raw Chat Completions request through the compatibility layer."""
 
-        return create_chat_completion(
-            self.client,
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format=response_format,
-        )
+        with inference_scope(getattr(self, 'inference_context', None)):
+            return create_chat_completion(self.client, model=self.model, messages=messages,
+                temperature=temperature, max_tokens=max_tokens, response_format=response_format)
     
     def chat(
         self,

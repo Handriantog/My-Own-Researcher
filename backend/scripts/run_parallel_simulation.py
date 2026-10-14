@@ -996,8 +996,8 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
         config: 模拟配置字典
         use_boost: 是否使用加速 LLM 配置（如果可用）
     """
-    from app.utils.provider_factory import create_agent_model
-    agent_model = create_agent_model()
+    from app.utils.provider_factory import create_agent_model, create_reviewed_openai_model
+    agent_model = create_agent_model() or create_reviewed_openai_model()
     if agent_model is not None:
         return agent_model
 

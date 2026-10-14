@@ -3,6 +3,7 @@
 采用项目上下文机制，服务端持久化状态
 """
 
+from research_runtime import ContextThread, current_context
 import os
 import re
 import traceback
@@ -907,7 +908,7 @@ def _build_graph_impl():
                     )
         
         # 启动后台线程
-        thread = threading.Thread(target=build_task, daemon=True)
+        thread = ContextThread(target=build_task, daemon=True)
         thread.start()
         
         return jsonify({
