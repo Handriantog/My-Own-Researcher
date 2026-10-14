@@ -1,10 +1,8 @@
 <template>
   <div class="main-view">
-    <!-- Header -->
+    <SiteHeader />
+    <!-- Research view toolbar -->
     <header class="app-header">
-      <div class="header-left">
-        <div class="brand" @click="router.push('/')">My Own Researcher</div>
-      </div>
       
       <div class="header-center">
         <div class="view-switcher">
@@ -21,8 +19,6 @@
       </div>
 
       <div class="header-right">
-        <LanguageSwitcher />
-        <div class="step-divider"></div>
         <div class="workflow-step">
           <span class="step-num">Step {{ currentStep }}/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[currentStep - 1] }}</span>
@@ -87,7 +83,7 @@ import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import { generateOntology, resumeOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
-import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import SiteHeader from '../components/SiteHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -442,7 +438,7 @@ const recoverProject = async () => {
   error.value = ''
   connectionError.value = false
   try {
-    if (needsFiles.value) router.push('/')
+    if (needsFiles.value) router.push('/research')
     else if (currentProjectId.value === 'new') await handleNewProject()
     else if (reconnect || !projectData.value) await loadProject()
     else if (!projectData.value.ontology) {

@@ -1,15 +1,15 @@
 <template>
   <div class="research-page"><ResearchNav /><main class="research-main">
-    <div class="research-breadcrumb"><RouterLink to="/#research">01 {{ t('research.sources') }}</RouterLink><span>→</span><strong>02 {{ t('research.review') }}</strong><span>→ 03 {{ t('research.research') }}</span></div>
+    <div class="research-breadcrumb"><RouterLink to="/research">01 {{ t('research.sources') }}</RouterLink><span>→</span><strong>02 {{ t('research.review') }}</strong><span>→ 03 {{ t('research.research') }}</span></div>
     <header class="research-heading"><div><span class="eyebrow accent">{{ t('research.ready') }}</span><h1>{{ t('research.title') }}</h1><p>{{ t('research.subtitle') }}</p></div><span class="step-number" aria-hidden="true">02</span></header>
     <p v-if="loading" class="research-loading" role="status">{{ t('research.checking') }}</p>
     <div v-if="source && metadata" class="review-grid">
       <aside class="source-summary"><span class="eyebrow">{{ t('research.yourResearch') }}</span><h2>{{ source.question }}</h2>
         <ul class="source-files"><li v-for="(file, index) in source.files" :key="index"><span aria-hidden="true">↳</span> {{ file.filename }}</li></ul>
         <span class="eyebrow">{{ t('research.throughReport') }}</span><ol class="stage-list"><li v-for="stage in ['analysis','graph','preparation','simulation','memory','report']" :key="stage">{{ t(`research.stages.${stage}`) }}</li></ol>
-        <p class="form-help">{{ t('research.controlHelp') }}</p><RouterLink class="back-link" to="/#research">← {{ t('research.back') }}</RouterLink>
+        <p class="form-help">{{ t('research.controlHelp') }}</p><RouterLink class="back-link" to="/research">← {{ t('research.back') }}</RouterLink>
       </aside>
-      <section :aria-label="t('research.settings')"><fieldset class="settings-lock" :disabled="starting || uncertain">
+      <section :aria-label="t('interface.runSettings')"><h2 class="run-settings-heading">{{ t('interface.runSettings') }}</h2><fieldset class="settings-lock" :disabled="starting || uncertain">
         <ResearchSettingsForm v-model="chosen" :metadata="metadata" /><label class="remember-setting"><input type="checkbox" v-model="remember" /> {{ t('research.remember') }}</label>
       </fieldset>
       <div class="estimate-block" aria-live="polite"><div class="label-line"><span class="eyebrow">{{ t('research.estimated') }}</span><span v-if="estimate" class="workload-label">{{ t(`research.labels.${estimate.label}`) }}</span></div>
@@ -21,7 +21,7 @@
       <button class="primary-action start-research" :disabled="!canStart" @click="start">{{ t(starting ? 'research.starting' : uncertain ? 'research.retryStart' : 'research.start') }} <span aria-hidden="true">↗</span></button><p class="action-help">{{ t('research.startHelp') }}</p>
       </section>
     </div>
-    <p v-if="error && (!source || !metadata)" class="research-error" role="alert">{{ error }} <RouterLink to="/#research">{{ t('research.back') }}</RouterLink></p>
+    <p v-if="error && (!source || !metadata)" class="research-error" role="alert">{{ error }} <RouterLink to="/research">{{ t('research.back') }}</RouterLink></p>
   </main></div>
 </template>
 <script setup>

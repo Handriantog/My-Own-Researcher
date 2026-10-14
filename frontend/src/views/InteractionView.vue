@@ -1,10 +1,8 @@
 <template>
   <div class="main-view">
-    <!-- Header -->
+    <SiteHeader />
+    <!-- Research view toolbar -->
     <header class="app-header">
-      <div class="header-left">
-        <div class="brand" @click="router.push('/')">My Own Researcher</div>
-      </div>
       
       <div class="header-center">
         <div class="view-switcher">
@@ -21,8 +19,6 @@
       </div>
 
       <div class="header-right">
-        <LanguageSwitcher />
-        <div class="step-divider"></div>
         <div class="workflow-step">
           <span class="step-num">Step 5/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[4] }}</span>
@@ -74,7 +70,7 @@ import Step5Interaction from '../components/Step5Interaction.vue'
 import { getProject, getGraphData } from '../api/graph'
 import { getSimulation } from '../api/simulation'
 import { getReport } from '../api/report'
-import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import SiteHeader from '../components/SiteHeader.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -4,6 +4,7 @@
 
 <script setup>
 import './assets/research.css'
+import './assets/interface.css'
 </script>
 
 <style>

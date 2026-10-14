@@ -208,7 +208,7 @@ test('refresh before upload persistence directs missing browser files back to se
   await c.handleNewProject()
   assert.equal(c.needsFiles.value, true)
   await c.recoverProject()
-  assert.equal(destination, '/')
+  assert.equal(destination, '/research')
 })
 
 test('prepared refresh profile failure shows reconnect and retains saved data without completing', async () => {

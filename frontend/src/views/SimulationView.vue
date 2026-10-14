@@ -1,10 +1,8 @@
 <template>
   <div class="main-view">
-    <!-- Header -->
+    <SiteHeader />
+    <!-- Research view toolbar -->
     <header class="app-header">
-      <div class="header-left">
-        <div class="brand" @click="router.push('/')">My Own Researcher</div>
-      </div>
       
       <div class="header-center">
         <div class="view-switcher">
@@ -21,8 +19,6 @@
       </div>
 
       <div class="header-right">
-        <LanguageSwitcher />
-        <div class="step-divider"></div>
         <div class="workflow-step">
           <span class="step-num">Step 2/5</span>
           <span class="step-name">{{ $tm('main.stepNames')[1] }}</span>
@@ -74,7 +70,7 @@ import GraphPanel from '../components/GraphPanel.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import { getProject, getGraphData } from '../api/graph'
 import { getSimulation, stopSimulation, getEnvStatus, closeSimulationEnv } from '../api/simulation'
-import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import SiteHeader from '../components/SiteHeader.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -157,7 +153,7 @@ const handleGoBack = () => {
   if (projectData.value?.project_id) {
     router.push({ name: 'Process', params: { projectId: projectData.value.project_id } })
   } else {
-    router.push('/')
+    router.push('/research')
   }
 }
 
