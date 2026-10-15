@@ -116,6 +116,37 @@ test('chat retry retains the user message and excludes errors from conversation 
   assert.equal(requests.length, 2, 'successful messages cannot be retried')
 })
 
+test('opening the individual selector keeps the current conversation until a person is selected', () => {
+  const c = component('Step5Interaction', ['toggleAgentDropdown', 'selectAgent', 'selectReportAgentChat', 'chatTarget', 'chatHistory', 'showAgentDropdown'], {}, { reportId: 'report' })
+  c.chatHistory.value = [{ role: 'assistant', content: 'Saved report answer' }]
+  c.toggleAgentDropdown()
+  assert.equal(c.showAgentDropdown.value, true)
+  assert.equal(c.chatTarget.value, 'report_agent')
+  assert.equal(c.chatHistory.value[0].content, 'Saved report answer')
+  c.selectAgent({ username: 'Alex' }, 0)
+  assert.equal(c.showAgentDropdown.value, false)
+  assert.equal(c.chatTarget.value, 'agent')
+  assert.equal(c.chatHistory.value.length, 0)
+  c.selectReportAgentChat()
+  assert.equal(c.chatHistory.value[0].content, 'Saved report answer')
+})
+
+test('a late terminal failure cannot replace a completed report with an error', async () => {
+  let rejectLog
+  const c = component('Step4Report', ['fetchReportStatus', 'fetchConsoleLog', 'isComplete', 'reportError', 'generatedSections'], {
+    getReport: async () => ok({ status: 'completed', outline: { sections: [{ content: 'Finished report' }] } }),
+    getConsoleLog: () => new Promise((resolve, reject) => { rejectLog = reject }),
+  }, { reportId: 'report' })
+  const logRequest = c.fetchConsoleLog()
+  await c.fetchReportStatus()
+  rejectLog(new Error('Log connection closed'))
+  await logRequest
+  assert.equal(c.isComplete.value, true)
+  assert.equal(c.reportError.value, '')
+  assert.equal(c.generatedSections.value[1], 'Finished report')
+  assert.equal(c.timers.size, 0)
+})
+
 test('survey retry sends only unanswered agents and retains successful answers', async () => {
   const requests = []
   const c = component('Step5Interaction', ['submitSurvey', 'retrySurvey', 'selectedAgents', 'surveyQuestion', 'surveyResults'], {
@@ -273,4 +304,36 @@ test('preparation status reconnect failure remains visible', async () => {
   await c.restorePreparation()
   assert.equal(c.prepareError.value, 'Status disconnected')
   assert.equal(c.connectionError.value, true)
+})
+
+test('saving failure retries findings without starting new rounds or discarding actions', async () => {
+  let saves = 0
+  const done = { runner_status: 'completed', simulation_completed: true, memory_status: 'completed', current_round: 42, total_rounds: 42 }
+  const c = component('Step3Simulation', ['recoverSimulation', 'runStatus', 'startError', 'stopRequested', 'recoveryLabel', 'recoveryHint'], {
+    startSimulation: async () => assert.fail('Completed rounds must never restart'),
+    retrySimulationMemory: async id => { assert.equal(id, 'sim'); saves++; return ok({ ...done, runner_status: 'stopping', memory_status: 'saving' }) },
+    getRunStatus: async () => ok(done),
+    getRunStatusDetail: async () => ok({ all_actions: [] }),
+  }, { simulationId: 'sim' })
+  c.runStatus.value = { ...done, runner_status: 'failed', memory_status: 'failed', stop_requested: true }
+  c.startError.value = 'Quota reached while saving'
+  c.stopRequested.value = true // older saved states used this flag for memory failures
+  assert.equal(c.recoveryLabel.value, 'recovery.retryMemory')
+  assert.equal(c.recoveryHint.value, 'recovery.memoryHint')
+  await c.recoverSimulation()
+  assert.equal(saves, 1)
+  assert.equal(c.runStatus.value.runner_status, 'completed')
+  assert.equal(c.runStatus.value.current_round, 42)
+  assert.equal(c.startError.value, null)
+})
+
+test('connection errors while saving stay visible despite a legacy stop flag', async () => {
+  const c = component('Step3Simulation', ['fetchRunStatus', 'runStatus', 'startError', 'stopError', 'stopRequested'], {
+    getRunStatus: async () => { throw Error('Disconnected while saving') },
+  }, { simulationId: 'sim' })
+  c.runStatus.value = { runner_status: 'stopping', simulation_completed: true, memory_status: 'saving' }
+  c.stopRequested.value = true
+  await c.fetchRunStatus()
+  assert.match(c.startError.value || '', /Disconnected/)
+  assert.equal(c.stopError.value, '')
 })

@@ -37,12 +37,15 @@ class LocalGraphClient:
 
     def call(self, operation, **params):
         context = current_context()
-        if context and operation in {'batch.create', 'graph.add'}:
+        if context and operation in {'batch.create', 'graph.add', 'simulation.resume'}:
             provider = getattr(context, 'graph_provider', None) or (os.environ.get('GRAPH_LLM_PROVIDER', '').strip() or (context.provider if context.provider != 'openai' else graph_provider()))
             model = getattr(context, 'graph_model', None) or os.environ.get('CODEX_MODEL' if provider == 'codex' else 'AGENT_MODEL') or None
             portable = replace(context.for_provider(provider, model), usage_path=None, stop_path=None).to_dict()
             if operation == 'batch.create':
                 params['metadata'] = dict(params.get('metadata', {}), inference_context=portable)
+            elif operation == 'simulation.resume':
+                if 'episodes' in params:
+                    params['episodes'] = [dict(item, inference_context=portable) for item in params['episodes']]
             else:
                 params['inference_context'] = portable
         response = self.http.post('/v1/rpc', json={'operation': operation, 'params': params})
@@ -78,8 +81,11 @@ class Graph:
     def add(self, **kwargs):
         return self.client.call('graph.add', **kwargs)
 
-    def resume_simulation(self, *, graph_id, simulation_id):
-        return self.client.call('simulation.resume', graph_id=graph_id, simulation_id=simulation_id)
+    def resume_simulation(self, *, graph_id, simulation_id, episodes=None):
+        params = dict(graph_id=graph_id, simulation_id=simulation_id)
+        if episodes is not None:
+            params['episodes'] = episodes
+        return self.client.call('simulation.resume', **params)
 
     def search(self, **kwargs):
         return self.client.call('graph.search', **kwargs)

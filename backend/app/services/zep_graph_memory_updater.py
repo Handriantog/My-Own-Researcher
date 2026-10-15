@@ -289,6 +289,8 @@ class ZepGraphMemoryUpdater:
         self._skipped_count = 0     # 被过滤跳过的活动数（DO_NOTHING）
         self._failed_batches: List[Dict[str, Any]] = []
         self._pending_episode_uuids: List[str] = []
+        self._progress_episode_uuids: List[str] = []
+        self._saving_started_at = None
         
         logger.info(f"ZepGraphMemoryUpdater 初始化完成: graph_id={graph_id}, batch_size={self.BATCH_SIZE}")
     
@@ -364,10 +366,16 @@ class ZepGraphMemoryUpdater:
             return
         path = self.checkpoint_path(self.simulation_id)
         path.parent.mkdir(parents=True, exist_ok=True)
+        if self._pending_episode_uuids:
+            self._progress_episode_uuids = list(self._pending_episode_uuids)
+        if self._saving_started_at is None:
+            self._saving_started_at = time.time()
         temporary = path.with_suffix('.tmp')
         temporary.write_text(json.dumps({'simulation_id': self.simulation_id,
             'graph_id': self.graph_id, 'provider': 'graphiti',
-            'episode_uuids': self._pending_episode_uuids}), encoding='utf-8')
+            'episode_uuids': self._pending_episode_uuids,
+            'progress_episode_uuids': self._progress_episode_uuids,
+            'started_at': self._saving_started_at}), encoding='utf-8')
         temporary.replace(path)
 
     def add_activity(self, activity: AgentActivity):
@@ -492,6 +500,31 @@ class ZepGraphMemoryUpdater:
             payloads.append((current_activities, "\n".join(current_lines)))
         return payloads
 
+    def _activity_payload(self, payload_activities, combined_text, platform):
+        return dict(
+            type="text",
+            data=combined_text,
+            created_at=self._to_rfc3339(payload_activities[-1].timestamp),
+            source_description="MiroFish simulation activity batch",
+            metadata={
+                "source": "mirofish_simulation",
+                "simulation_id": self.simulation_id,
+                "platform": platform,
+                "activity_count": len(payload_activities),
+                "first_round": min(a.round_num for a in payload_activities),
+                "last_round": max(a.round_num for a in payload_activities),
+                "agent_ids": ",".join(
+                    str(value)
+                    for value in sorted({a.agent_id for a in payload_activities})
+                ),
+                "action_types": ",".join(
+                    value
+                    for value in sorted({a.action_type for a in payload_activities})
+                    if value
+                ) or "unknown",
+            },
+        )
+
     def _send_batch_activities(
         self,
         activities: List[AgentActivity],
@@ -516,27 +549,7 @@ class ZepGraphMemoryUpdater:
             try:
                 episode = self.client.graph.add(
                     graph_id=self.graph_id,
-                    type="text",
-                    data=combined_text,
-                    created_at=self._to_rfc3339(payload_activities[-1].timestamp),
-                    source_description="MiroFish simulation activity batch",
-                    metadata={
-                        "source": "mirofish_simulation",
-                        "simulation_id": self.simulation_id,
-                        "platform": platform,
-                        "activity_count": len(payload_activities),
-                        "first_round": min(a.round_num for a in payload_activities),
-                        "last_round": max(a.round_num for a in payload_activities),
-                        "agent_ids": ",".join(
-                            str(value)
-                            for value in sorted({a.agent_id for a in payload_activities})
-                        ),
-                        "action_types": ",".join(
-                            value
-                            for value in sorted({a.action_type for a in payload_activities})
-                            if value
-                        ) or "unknown",
-                    },
+                    **self._activity_payload(payload_activities, combined_text, platform),
                 )
 
                 episode_uuid = (
@@ -718,13 +731,17 @@ class ZepGraphMemoryManager:
             return False
         updater = cls.get_updater(simulation_id)
         if updater is None:
-            if not cls.has_ingestion_checkpoint(simulation_id):
-                return False
-            saved = json.loads(ZepGraphMemoryUpdater.checkpoint_path(simulation_id).read_text())
-            if saved.get('simulation_id') != simulation_id or saved.get('provider') != 'graphiti':
-                raise ValueError('Graph ingestion checkpoint does not match this simulation')
+            if cls.has_ingestion_checkpoint(simulation_id):
+                saved = json.loads(ZepGraphMemoryUpdater.checkpoint_path(simulation_id).read_text())
+                if saved.get('simulation_id') != simulation_id or saved.get('provider') != 'graphiti':
+                    raise ValueError('Graph ingestion checkpoint does not match this simulation')
+            else:
+                folder = Path(Config.OASIS_SIMULATION_DATA_DIR) / simulation_id
+                if not (folder / 'state.json').exists() or not list(folder.glob('*/actions.jsonl')):
+                    return False
+                saved = json.loads((folder / 'state.json').read_text())
             updater = ZepGraphMemoryUpdater(saved['graph_id'], simulation_id=simulation_id)
-            updater._pending_episode_uuids = saved['episode_uuids']
+            updater._pending_episode_uuids = saved.get('episode_uuids', [])
             with cls._lock:
                 cls._updaters[simulation_id] = updater
                 cls._stop_all_done = False
@@ -732,12 +749,52 @@ class ZepGraphMemoryManager:
             return False
         if updater._running or (updater._worker_thread and updater._worker_thread.is_alive()):
             return False
-        if updater._failed_batches:
-            raise RuntimeError('Activity upload failed before extraction; cannot replay an ambiguous write')
-        if updater._pending_episode_uuids:
+        updater._saving_started_at = time.time()
+        folder = Path(Config.OASIS_SIMULATION_DATA_DIR) / simulation_id
+        logs = [folder / platform / 'actions.jsonl' for platform in ('twitter', 'reddit')
+                if (folder / platform / 'actions.jsonl').exists()]
+        if logs:
+            payloads = []
+            for log in logs:
+                activities = []
+                for line in log.read_text(encoding='utf-8').splitlines():
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    if 'event_type' in row or row.get('success') is False or row.get('action_type') == 'DO_NOTHING':
+                        continue
+                    activities.append(AgentActivity(log.parent.name, row.get('agent_id', 0),
+                        row.get('agent_name', ''), row['action_type'], row.get('action_args', {}),
+                        row.get('round', 0), row['timestamp']))
+                for offset in range(0, len(activities), updater.BATCH_SIZE):
+                    for batch, text in updater._build_episode_payloads(activities[offset:offset + updater.BATCH_SIZE]):
+                        payloads.append(updater._activity_payload(batch, text, log.parent.name))
+            # The local journal reconciles accepted writes and atomically inserts
+            # missing payloads. Repeating even a lost response is safe.
+            result = updater.client.graph.resume_simulation(
+                graph_id=updater.graph_id, simulation_id=simulation_id, episodes=payloads)
+            if getattr(result, 'reconciled', False) is not True:
+                raise RuntimeError('Restart the local graph service to enable saved-activity recovery')
+            updater._pending_episode_uuids = list(result.episode_uuids)
+            # Reconciliation covers the complete saved log, including any tail
+            # left buffered when a prior drain timed out.
+            with updater._buffer_lock:
+                updater._platform_buffers.clear()
+            while True:
+                try:
+                    updater._activity_queue.get_nowait()
+                except Empty:
+                    break
+            updater._failed_batches = []
+            updater._failed_count = 0
+            updater._save_ingestion_checkpoint()
+        elif updater._failed_batches:
+            raise RuntimeError('Saved activity is missing; cannot reconcile an ambiguous write')
+        elif updater._pending_episode_uuids:
             result = updater.client.graph.resume_simulation(
                 graph_id=updater.graph_id, simulation_id=simulation_id)
             updater._pending_episode_uuids = list(result.episode_uuids)
+            updater._save_ingestion_checkpoint()
         return True
 
     @classmethod

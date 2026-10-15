@@ -145,7 +145,7 @@ def partial_report(run_id):
 
 
 INFERENCE_PATHS = {'/api/graph/ontology/generate','/api/graph/ontology/resume','/api/graph/build',
-    '/api/simulation/prepare','/api/simulation/start','/api/simulation/generate-profiles',
+    '/api/simulation/prepare','/api/simulation/start','/api/simulation/retry-memory','/api/simulation/generate-profiles',
     '/api/simulation/interview','/api/simulation/interview/batch','/api/simulation/interview/all',
     '/api/report/generate','/api/report/chat'}
 

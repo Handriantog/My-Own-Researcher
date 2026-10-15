@@ -1,8 +1,8 @@
 <template>
   <div class="simulation-panel">
-    <RecoveryBanner :retry-key="`${simulationId}:run`" :auto-retry="!stopRequested" :completed="canGenerateReport" :error="startError" :busy="isStarting || recovering" :label="$t(connectionError ? 'recovery.reconnect' : 'recovery.restart')" :hint="connectionError ? '' : $t('recovery.restartHint')" @retry="recoverSimulation" />
+    <RecoveryBanner :retry-key="`${simulationId}:${runStatus.simulation_completed ? 'memory' : 'run'}`" :auto-retry="runStatus.simulation_completed || !stopRequested" :completed="canGenerateReport" :error="startError" :busy="isStarting || recovering || (!connectionError && runStatus.memory_status === 'saving')" :label="$t(recoveryLabel)" :hint="recoveryHint ? $t(recoveryHint) : ''" @retry="recoverSimulation" />
     <RecoveryBanner :retry-key="`${simulationId}:report`" :error="reportError" :busy="isGeneratingReport" @retry="handleNextStep" />
-    <RecoveryBanner :retry-key="`${simulationId}:stop`" :error="stopError" :busy="isStopping" :completed="runStatus.runner_status === 'stopped' && canGenerateReport" :label="$t('step3.retryStop')" @retry="handleStopSimulation" />
+    <RecoveryBanner v-if="!runStatus.simulation_completed" :retry-key="`${simulationId}:stop`" :error="stopError" :busy="isStopping" :completed="runStatus.runner_status === 'stopped' && canGenerateReport" :label="$t('step3.retryStop')" @retry="handleStopSimulation" />
     <RecoveryBanner :retry-key="`${simulationId}:effort-config`" :error="configError" :busy="loadingConfig" :completed="!!fullRounds && !configError" @retry="loadEffortConfig" />
     <section v-if="phase === 0 && !stopRequested" class="effort-selector" aria-labelledby="effort-title">
       <h3 id="effort-title">{{ $t('step3.effortTitle') }}</h3>
@@ -326,6 +326,7 @@ import { useI18n } from 'vue-i18n'
 import {
   startSimulation,
   stopSimulation,
+  retrySimulationMemory,
   getRunStatus,
   getRunStatusDetail,
   getSimulationConfig
@@ -377,7 +378,9 @@ const selectedEffort = ref(normalizeSimulationEffort(readStored(effortStorageKey
 const stopRequested = ref(readStored(stopStorageKey) === 'true')
 const fullRounds = computed(() => plannedSimulationRounds(simulationConfig.value))
 const selectedRounds = computed(() => roundsForEffort(fullRounds.value, selectedEffort.value))
-const canStop = computed(() => !stopRequested.value && (isStarting.value || ['starting', 'running', 'paused'].includes(runStatus.value.runner_status)))
+const canStop = computed(() => !runStatus.value.simulation_completed && !stopRequested.value && (isStarting.value || ['starting', 'running', 'paused'].includes(runStatus.value.runner_status)))
+const recoveryLabel = computed(() => connectionError.value ? 'recovery.reconnect' : runStatus.value.simulation_completed ? 'recovery.retryMemory' : 'recovery.restart')
+const recoveryHint = computed(() => connectionError.value ? '' : runStatus.value.simulation_completed ? 'recovery.memoryHint' : 'recovery.restartHint')
 const canGenerateReport = computed(() => ['completed', 'stopped'].includes(runStatus.value.runner_status) && !startError.value && !stopError.value && !isStopping.value && !loadingFinalActivity.value)
 const selectEffort = effort => {
   selectedEffort.value = normalizeSimulationEffort(effort)
@@ -622,7 +625,7 @@ const fetchRunStatus = async () => {
       
       runStatus.value = data
       if (data.runner_status !== 'idle' && data.simulation_effort) selectEffort(data.simulation_effort)
-      if (data.stop_requested || ['stopping', 'stopped'].includes(data.runner_status)) {
+      if (!data.simulation_completed && (data.stop_requested || ['stopping', 'stopped'].includes(data.runner_status))) {
         stopRequested.value = true
         saveStored(stopStorageKey, 'true')
       }
@@ -646,7 +649,7 @@ const fetchRunStatus = async () => {
       // terminal state after the Zep ingestion barrier has completed.
       if (isFailed) {
         connectionError.value = false
-        if (stopRequested.value) stopError.value = data.error || t('log.simFailed')
+        if (stopRequested.value && !data.simulation_completed) stopError.value = data.error || t('log.simFailed')
         else startError.value = data.error || t('log.simFailed')
         addLog(t('log.simFailed') + (data.error ? `: ${data.error}` : ''))
         phase.value = 2
@@ -677,7 +680,7 @@ const fetchRunStatus = async () => {
     if (generation !== runGeneration) return
     stopPolling()
     connectionError.value = true
-    if (stopRequested.value) stopError.value = err.message
+    if (stopRequested.value && !runStatus.value.simulation_completed) stopError.value = err.message
     else startError.value = err.message
     emit('update-status', 'error')
   }
@@ -741,7 +744,7 @@ const fetchRunStatusDetail = async () => {
     if (generation !== runGeneration) return
     stopPolling()
     connectionError.value = true
-    if (stopRequested.value) stopError.value = err.message
+    if (stopRequested.value && !runStatus.value.simulation_completed) stopError.value = err.message
     else startError.value = err.message
   }
 }
@@ -873,7 +876,7 @@ const restoreSimulation = async () => {
 
 const recovering = ref(false)
 const recoverSimulation = async () => {
-  if (stopRequested.value) return handleStopSimulation()
+  if (stopRequested.value && !runStatus.value.simulation_completed) return handleStopSimulation()
   if (recovering.value || isStarting.value) return
   recovering.value = true
   try {
@@ -883,6 +886,20 @@ const recoverSimulation = async () => {
       if (retryRequestedStart && runStatus.value.runner_status === 'idle' && !startError.value && !stopError.value && !configError.value) {
         await doStartSimulation(false)
       }
+    } else if (runStatus.value.simulation_completed) {
+      runGeneration++
+      startError.value = null
+      stopError.value = ''
+      try {
+        const result = await retrySimulationMemory(props.simulationId)
+        if (!result.success) throw new Error(result.error || t('common.unknownError'))
+        runStatus.value = result.data
+        await fetchRunStatus()
+        if (!['completed', 'failed', 'stopped'].includes(runStatus.value.runner_status)) {
+          startStatusPolling()
+          startDetailPolling()
+        }
+      } catch (error) { startError.value = error.message; connectionError.value = true }
     } else await doStartSimulation(true)
   } finally { recovering.value = false }
 }

@@ -19,17 +19,6 @@
       <div v-if="graphData" class="graph-view">
         <svg ref="graphSvg" class="graph-svg"></svg>
         
-        <!-- 构建中/模拟中提示 -->
-        <div v-if="currentPhase === 1 || isSimulating" class="graph-building-hint">
-          <div class="memory-icon-wrapper">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="memory-icon">
-              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-4.04z" />
-              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-4.04z" />
-            </svg>
-          </div>
-          {{ isSimulating ? $t('graph.graphMemoryRealtime') : $t('graph.realtimeUpdating') }}
-        </div>
-        
         <!-- 模拟结束后的提示 -->
         <div v-if="showSimulationFinishedHint" class="graph-building-hint finished-hint">
           <div class="hint-icon-wrapper">
@@ -209,7 +198,7 @@
       <!-- 等待/空状态 -->
       <div v-else class="graph-state">
         <div class="empty-icon">❖</div>
-        <p class="empty-text">{{ $t('graph.waitingOntology') }}</p>
+        <p class="empty-text">{{ emptyMessage || $t('graph.waitingOntology') }}</p>
       </div>
     </div>
 
@@ -241,6 +230,7 @@ import * as d3 from 'd3'
 
 const props = defineProps({
   graphData: Object,
+  emptyMessage: String,
   loading: Boolean,
   currentPhase: Number,
   isSimulating: Boolean
@@ -802,6 +792,7 @@ const handleResize = () => {
 }
 
 onMounted(() => {
+  nextTick(renderGraph)
   window.addEventListener('resize', handleResize)
 })
 
@@ -1230,24 +1221,6 @@ input:checked + .slider:before {
   font-weight: 500;
   letter-spacing: 0.5px;
   z-index: 100;
-}
-
-.memory-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: breathe 2s ease-in-out infinite;
-}
-
-.memory-icon {
-  width: 18px;
-  height: 18px;
-  color: #4CAF50;
-}
-
-@keyframes breathe {
-  0%, 100% { opacity: 0.7; transform: scale(1); filter: drop-shadow(0 0 2px rgba(76, 175, 80, 0.3)); }
-  50% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.6)); }
 }
 
 /* 模拟结束后的提示样式 */

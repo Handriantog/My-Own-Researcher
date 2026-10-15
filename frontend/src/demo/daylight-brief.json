@@ -1,0 +1,46 @@
+{
+  "company": "Daylight",
+  "feature": "Plan my week",
+  "date": "15 October 2026",
+  "notice": "Fictional company, people, metrics and feedback, created for a product-research demo. These are scenario inputs, not findings from real users.",
+  "question": "Would Daylight users welcome Plan my week, and under which controls and pricing? Compare an opt-in preview included in Pro, a US$4/month add-on, and keeping manual planning. Identify who would try or reject it, objections that could change their mind, must-have safeguards, and a real-user validation plan. Separate simulated reactions from verified demand.",
+  "companyContext": "Daylight is a fictional personal task-planning app for freelancers, students and people coordinating work with home responsibilities. Users capture tasks, assign due dates and manually arrange their week. The Free plan covers task lists; Pro costs US$8 per month and adds calendar views and recurring tasks. The proposed feature is not released.",
+  "metrics": [
+    {"value": "12,000", "label": "fictional monthly active users"},
+    {"value": "18%", "label": "fictional Pro share"},
+    {"value": "6 weeks", "label": "proposed beta window"}
+  ],
+  "problem": "In a fictional sample of 12 exploratory interviews, seven participants described repeatedly moving unfinished tasks, five disliked elaborate planning setup, and four already had a weekly routine they preferred. These categories overlap. The interviews were not representative, did not test a working feature, and did not measure willingness to pay. In a separate invented support sample, 19 of 80 tickets concerned overdue tasks or schedule clutter; that does not prove automated scheduling would solve the problem.",
+  "proposal": "Plan my week turns selected tasks into a proposed weekly schedule using user-supplied duration estimates, due dates, working hours and read-only calendar availability. It explains the main trade-offs and flags tasks that do not fit. A user reviews the preview, can lock or move blocks, and explicitly approves the plan. The product hypothesis is that reducing weekly planning effort will help people start important work without feeling controlled.",
+  "controls": [
+    "Off by default. The user selects which tasks and which calendars to include.",
+    "Read free/busy availability only; event titles, attendees and notes are outside the proposed feature scope.",
+    "No automatic calendar edits, task deletion or silent rescheduling. Approval applies only to the plan shown.",
+    "Manual mode stays available. Provide undo, locked blocks, buffer time and a clear disconnect control.",
+    "Explain why a task moved and show uncertainty when task-duration estimates are weak. Do not promise productivity gains."
+  ],
+  "options": [
+    {"name": "Included in Pro", "detail": "Opt-in planning preview at the existing US$8/month Pro price; Free users see a sample without connecting a calendar."},
+    {"name": "US$4 add-on", "detail": "The same feature costs US$4/month on top of Pro, for US$12/month total. No automatic enrollment or billing in this scenario."},
+    {"name": "Manual first", "detail": "Keep the existing product and improve drag-and-drop planning and reminders. Defer automated scheduling until evidence is stronger."}
+  ],
+  "participants": [
+    {"name": "Nina Patel", "role": "Product manager", "context": "Owns the beta proposal at Daylight. Wants repeat use, not novelty clicks. Can recommend scope but cannot claim approval or promise retention gains.", "position": "Interested in an opt-in Pro beta if users can understand, edit and undo the plan."},
+    {"name": "Alex Chen", "role": "Freelance designer", "context": "Pro user with changing client deadlines and mixed task sizes. Replans most weeks. Would value help but distrusts inaccurate duration estimates.", "position": "Would try a preview; needs buffers and locked client commitments before relying on it."},
+    {"name": "Sofia Reyes", "role": "Working parent", "context": "Pro user balancing work tasks and family commitments. Availability changes unexpectedly. Does not want family-event details processed.", "position": "May try it if free/busy access is enough and nothing moves without approval."},
+    {"name": "Jordan Lee", "role": "University student", "context": "Free user with an irregular timetable and a limited software budget. Usually plans on a phone. Has not paid for Daylight.", "position": "Curious about saving effort, but a new subscription is a barrier. A static example is not enough to establish value."},
+    {"name": "Marcus Reed", "role": "Independent consultant", "context": "Pro power user with a stable weekly review habit. Likes deliberate manual planning and dislikes busy interfaces.", "position": "Prefers manual mode unless suggestions are clearly better and easy to ignore. Opposes losing existing controls."},
+    {"name": "Priya Shah", "role": "Privacy-conscious analyst", "context": "Free user who keeps work and personal tasks separate. Will not connect an employer-managed calendar without permission.", "position": "Would consider a tasks-only preview; needs exact data-use and retention explanations before connecting anything."}
+  ],
+  "researchQuestions": [
+    {"title": "Useful for whom?", "detail": "Which situations make a planning preview worthwhile? Compare flexible schedules, stable routines, budget-limited users and people who cannot connect a calendar."},
+    {"title": "What prevents a first try?", "detail": "Identify confusing setup, inaccurate duration estimates, permission concerns and missing mobile controls. Separate curiosity from intent to use."},
+    {"title": "How much control is enough?", "detail": "Test reactions to preview and approval, undo, locked blocks, explanations, buffers and tasks-only mode. Identify non-negotiable safeguards."},
+    {"title": "Which offer feels fair?", "detail": "Compare inclusion in Pro with the US$4 add-on and manual improvements. Capture stated price objections without inventing conversion or revenue forecasts."},
+    {"title": "Would it earn repeat use?", "detail": "Explore what users would need to see after a disrupted week. Distinguish an attractive first preview from a trustworthy recurring habit."},
+    {"title": "What should the team test next?", "detail": "Recommend a focused beta, tasks for usability sessions, evidence that could overturn the recommendation, and launch, revise or defer criteria."}
+  ],
+  "validation": "Proposed real-world follow-up: recruit 12 consenting users across the five user situations for moderated prototype tasks, then invite up to 40 volunteers to a six-week opt-in beta. Observe setup completion, edits and undo use, self-reported control, repeat weekly use and reasons for abandoning the feature. Compare planning effort with each participant's baseline. Test pricing separately with clearly hypothetical offers before any real billing. These are planned studies, not completed results or statistical proof.",
+  "decisionRules": "Proceed to a beta only if participants can explain the permission scope and approve or undo a plan without help, and no critical consent or silent-rescheduling issue remains. Revise if users cannot predict what the feature changes or repeatedly discard plans for the same reason. Defer a paid launch until repeat-use and price evidence exist. The six fictional personas are not a representative sample and cannot establish market demand.",
+  "runScope": "English-language exploratory simulation. Use only the six named people as speaking personas; Daylight and Plan my week are context, not extra speakers. Use one Reddit-style discussion. Plan 24 simulated hours at 60 minutes per round; Quick depth targets six rounds (25% of that plan). Begin with differing positions, discuss concrete counterexamples and allow disagreement. Do not invent surveys, payments, conversions, retention results or feature launches. Produce a concise report covering each research question, observed disagreements, limitations and next research steps."
+}

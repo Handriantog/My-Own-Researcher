@@ -66,3 +66,47 @@ def test_full_pipeline_preserves_reviewed_model_rounds_platform_and_report(tmp_p
     assert result['estimate']['assumptions']['agents']==[5,5]
     project=ProjectManager.get_project(result['project_id'])
     assert project.research_run_id==run['run_id']
+
+
+def test_completed_simulation_failure_resumes_memory_then_report_without_restart(tmp_path, monkeypatch):
+    from app.services.research_stages import ResearchStages
+    from app.services.simulation_runner import SimulationRunState, RunnerStatus
+    state = SimulationRunState('sim_saved', runner_status=RunnerStatus.FAILED, current_round=42, total_rounds=42)
+    state.simulation_completed = True
+    monkeypatch.setattr(SimulationRunner, 'get_run_state', lambda sid: state)
+    monkeypatch.setattr(ReportManager, 'get_report', lambda rid: SimpleNamespace(to_dict=lambda: {'status':'completed'}))
+    app = Flask(__name__)
+    calls = []
+    @app.route('/api/<path:path>', methods=['GET','POST'])
+    def stage(path):
+        calls.append(path)
+        if path == 'simulation/start':
+            return {'success':False,'error':'Must not restart completed rounds'}, 409
+        if path == 'simulation/retry-memory':
+            state.runner_status = RunnerStatus.COMPLETED
+            return {'success':True,'data':state.to_dict()}
+        if path.endswith('/run-status'):
+            return {'success':True,'data':state.to_dict()}
+        if path == 'report/generate':
+            return {'success':True,'data':{'report_id':'saved_report'}}
+        return {'success':False}, 404
+    bridge = ResearchStages(app, tmp_path)
+    monkeypatch.setattr(bridge, 'synchronize_usage', lambda run: None)
+    run = {'simulation_id':'sim_saved', 'settings':{'platform':'parallel','depth':'quick'}}
+    for step in ('simulation','memory','report'):
+        bridge.execute(step, run, lambda **kw: None, lambda: False)
+    assert calls == ['simulation/retry-memory', 'simulation/sim_saved/run-status', 'report/generate']
+    assert state.current_round == 42
+
+
+def test_simulation_stage_hands_off_to_memory_before_ingestion_finishes(tmp_path, monkeypatch):
+    from app.services.research_stages import ResearchStages
+    from app.services.simulation_runner import SimulationRunState, RunnerStatus
+    state = SimulationRunState('sim_saved', runner_status=RunnerStatus.RUNNING)
+    monkeypatch.setattr(SimulationRunner, 'get_run_state', lambda sid: state)
+    bridge = ResearchStages(None, tmp_path)
+    monkeypatch.setattr(bridge, 'call', lambda *a, **kw: {'runner_status':'stopping','simulation_completed':True,'memory_status':'saving'})
+    # A single observation must complete the rounds stage; memory keeps its own barrier.
+    import app.services.research_stages as stages
+    monkeypatch.setattr(stages.time, 'sleep', lambda seconds: (_ for _ in ()).throw(AssertionError('Still waiting on memory in simulation stage')))
+    bridge.execute('simulation', {'simulation_id':'sim_saved','settings':{}}, lambda **kw: None, lambda: False)

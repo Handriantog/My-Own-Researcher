@@ -63,7 +63,18 @@ class ResearchRuns:
                 result['usage']['coverage'] = 'partial' if result['usage']['reported_calls'] else 'unknown'
                 if result['usage']['reasoning_coverage'] == 'complete':
                     result['usage']['reasoning_coverage'] = 'partial'
-        result['simulation_restart_required'] = run['stage'] == 'simulation' and run['status'] in {'failed','interrupted','stopped'}
+        simulation_finished = False
+        if run.get('simulation_id') and run['stage'] in {'simulation', 'memory'}:
+            from .simulation_runner import SimulationRunner
+            state = SimulationRunner.get_run_state(run['simulation_id'])
+            simulation_finished = bool(state and getattr(state, 'simulation_completed', False))
+            if simulation_finished and result['stage'] == 'simulation':
+                result['stage'] = 'memory'
+                result['completed_stages'] = list(dict.fromkeys([*result['completed_stages'], 'simulation']))
+                if result.get('error'):
+                    result['error']['stage'] = 'memory'
+        result['memory_recovery_required'] = simulation_finished and run['status'] in {'failed','interrupted','stopped'}
+        result['simulation_restart_required'] = not simulation_finished and run['stage'] == 'simulation' and run['status'] in {'failed','interrupted','stopped'}
         result.pop('fingerprint', None)
         return result
 

@@ -94,6 +94,8 @@ export const stopSimulation = (data) => {
   return service.post('/api/simulation/stop', data)
 }
 
+export const retrySimulationMemory = simulationId => service.post('/api/simulation/retry-memory', { simulation_id: simulationId })
+
 /**
  * 获取模拟运行实时状态
  * @param {string} simulationId

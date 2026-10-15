@@ -20,8 +20,8 @@
 
       <div class="header-right">
         <div class="workflow-step">
-          <span class="step-num">Step 5/5</span>
-          <span class="step-name">{{ $tm('main.stepNames')[4] }}</span>
+          <span class="step-name">{{ $t('step5.followUpTitle') }}</span>
+          <span class="optional-label">{{ $t('step5.optional') }}</span>
         </div>
         <div class="step-divider"></div>
         <span class="status-indicator" :class="statusClass">
@@ -314,6 +314,14 @@ onMounted(() => {
 .step-name {
   font-weight: 700;
   color: #000;
+}
+
+.optional-label {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #F3F4F6;
+  color: #6B7280;
+  font-size: 11px;
 }
 
 .step-divider {

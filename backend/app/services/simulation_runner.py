@@ -127,6 +127,8 @@ class SimulationRunState:
     simulation_effort: str = "full"
     planned_full_rounds: int = 0
     stop_requested: bool = False
+    simulation_completed: bool = False
+    memory_status: str = "pending"
     
     # 各平台独立轮次和模拟时间（用于双平台并行显示）
     twitter_current_round: int = 0
@@ -186,6 +188,9 @@ class SimulationRunState:
             "simulation_effort": self.simulation_effort,
             "planned_full_rounds": self.planned_full_rounds,
             "stop_requested": self.stop_requested,
+            "simulation_completed": self.simulation_completed,
+            "memory_status": self.memory_status,
+            "memory_recovery_required": self.simulation_completed and self.runner_status == RunnerStatus.FAILED,
             "progress_percent": round(self.current_round / max(self.total_rounds, 1) * 100, 1),
             # 各平台独立轮次和时间
             "twitter_current_round": self.twitter_current_round,
@@ -318,8 +323,9 @@ class SimulationRunner:
                     "Simulation was interrupted by a server restart. Preparation is saved; "
                     "restart this simulation to run again from round 1."
                 )
-                if ZepGraphMemoryManager.has_ingestion_checkpoint(simulation_id):
+                if state.simulation_completed or ZepGraphMemoryManager.has_ingestion_checkpoint(simulation_id):
                     state.stop_requested = True
+                    state.memory_status = "failed"
                     state.error = "Graph saving was interrupted by a server restart. Retry to finish saving the recorded activity."
                 state.twitter_running = False
                 state.reddit_running = False
@@ -385,6 +391,10 @@ class SimulationRunner:
                 process_pid=data.get("process_pid"),
             )
             
+            state.simulation_completed = data.get('simulation_completed', cls._check_all_platforms_completed(state))
+            state.memory_status = data.get('memory_status',
+                'completed' if state.runner_status == RunnerStatus.COMPLETED else
+                'failed' if state.simulation_completed else 'pending')
             # 加载最近动作
             actions_data = data.get("recent_actions", [])
             for a in actions_data:
@@ -758,7 +768,7 @@ class SimulationRunner:
 
                 if state.runner_status not in {
                     RunnerStatus.STOPPED,
-                    RunnerStatus.FAILED,
+                    RunnerStatus.FAILED, RunnerStatus.COMPLETED,
                 }:
                     manual_stop = simulation_id in cls._manual_stop_requests
                     desired_status = (
@@ -792,6 +802,7 @@ class SimulationRunner:
                         # and report API must not observe COMPLETED until every
                         # accepted episode is processed by Zep Cloud.
                         state.runner_status = RunnerStatus.STOPPING
+                        state.memory_status = "saving"
                         cls._save_run_state(state)
                         cls._sync_simulation_status(
                             simulation_id,
@@ -800,6 +811,7 @@ class SimulationRunner:
                         try:
                             ZepGraphMemoryManager.stop_updater(simulation_id)
                             cls._graph_memory_enabled.pop(simulation_id, None)
+                            state.memory_status = "completed"
                             logger.info(
                                 "已停止图谱记忆更新: simulation_id=%s",
                                 simulation_id,
@@ -807,6 +819,7 @@ class SimulationRunner:
                         except Exception as error:
                             logger.error(f"停止图谱记忆更新器失败: {error}")
                             desired_status = RunnerStatus.FAILED
+                            state.memory_status = "failed"
                             error_message = f"Zep graph writes did not finish: {error}"
 
                     state.runner_status = desired_status
@@ -898,6 +911,7 @@ class SimulationRunner:
                                     # 如果运行了两个平台，需要两个都完成
                                     all_completed = cls._check_all_platforms_completed(state)
                                     if all_completed:
+                                        state.simulation_completed = True
                                         # Platform completion is only an input
                                         # signal. The monitor publishes the
                                         # terminal status after the process has
@@ -970,16 +984,20 @@ class SimulationRunner:
             # A concurrent manual stop owns its own finalization.
             if state.runner_status not in {RunnerStatus.STARTING, RunnerStatus.RUNNING}:
                 return
+            state.simulation_completed = True
             desired_status = RunnerStatus.COMPLETED
             error_message = None
             if cls._graph_memory_enabled.get(simulation_id, False):
                 state.runner_status = RunnerStatus.STOPPING
+                state.memory_status = "saving"
                 cls._save_run_state(state)
                 cls._sync_simulation_status(simulation_id, RunnerStatus.STOPPING)
                 try:
                     ZepGraphMemoryManager.stop_updater(simulation_id)
                     cls._graph_memory_enabled.pop(simulation_id, None)
+                    state.memory_status = "completed"
                 except Exception as error:
+                    state.memory_status = "failed"
                     desired_status = RunnerStatus.FAILED
                     error_message = f"Graph memory writes did not finish: {error}"
             state.runner_status = desired_status
@@ -1071,6 +1089,75 @@ class SimulationRunner:
                 os.killpg(pgid, signal.SIGKILL)
                 process.wait(timeout=5)
     
+    @classmethod
+    def retry_memory(cls, simulation_id):
+        """Retry saved findings only; never start, stop, or archive simulation rounds."""
+        worker = cls._stop_threads.get(simulation_id)
+        if worker and worker.is_alive():
+            return cls.get_run_state(simulation_id)
+        with cls._finalization_lock(simulation_id):
+            state = cls.get_run_state(simulation_id)
+            if state is None or not state.simulation_completed:
+                raise ValueError('The simulation must finish before retrying saved findings')
+            if state.runner_status == RunnerStatus.COMPLETED:
+                return state
+            worker = cls._stop_threads.get(simulation_id)
+            if worker and worker.is_alive():
+                return state
+            if state.memory_status == 'saving':
+                return state
+            state.runner_status = RunnerStatus.STOPPING
+            state.memory_status = 'saving'
+            state.error = None
+            cls._save_run_state(state)
+            cls._sync_simulation_status(simulation_id, RunnerStatus.STOPPING)
+            locale = get_locale()
+
+            def finish_memory():
+                set_locale(locale)
+                with cls._finalization_lock(simulation_id):
+                    try:
+                        context = current_context()
+                        if context and context.cancelled():
+                            if Config.GRAPH_PROVIDER == 'graphiti':
+                                from ..utils.zep import get_zep_client
+                                get_zep_client().call('research.stop', run_id=context.run_id, stopped=False)
+                            if context.stop_path:
+                                from pathlib import Path
+                                Path(context.stop_path).unlink(missing_ok=True)
+                        resumed = ZepGraphMemoryManager.resume_updater(simulation_id)
+                        if not resumed and ZepGraphMemoryManager.get_updater(simulation_id) is None:
+                            raise RuntimeError('Saved graph activity is unavailable; simulation results are preserved')
+                        ZepGraphMemoryManager.stop_updater(simulation_id)
+                        cls._graph_memory_enabled.pop(simulation_id, None)
+                        state.runner_status = RunnerStatus.COMPLETED
+                        state.memory_status = 'completed'
+                        state.stop_requested = False
+                        state.error = None
+                        cls._manual_stop_requests.discard(simulation_id)
+                    except Exception as error:
+                        state.runner_status = RunnerStatus.FAILED
+                        state.memory_status = 'failed'
+                        state.error = f'Saving findings failed: {error}'
+                    finally:
+                        state.completed_at = datetime.now().isoformat()
+                        cls._save_run_state(state)
+                        cls._sync_simulation_status(simulation_id, state.runner_status, state.error)
+                        cls._stop_threads.pop(simulation_id, None)
+
+            worker = ContextThread(target=finish_memory, daemon=True)
+            cls._stop_threads[simulation_id] = worker
+            try:
+                worker.start()
+            except Exception as error:
+                cls._stop_threads.pop(simulation_id, None)
+                state.runner_status = RunnerStatus.FAILED
+                state.memory_status = 'failed'
+                state.error = str(error)
+                cls._save_run_state(state)
+                raise
+            return state
+
     @classmethod
     def request_stop(cls, simulation_id: str) -> SimulationRunState:
         """Acknowledge stop immediately; one worker owns termination and draining."""

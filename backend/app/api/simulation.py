@@ -1688,6 +1688,12 @@ def start_simulation():
                 "error": t('api.simulationNotFound', id=simulation_id)
             }), 404
 
+        previous_run = SimulationRunner.get_run_state(simulation_id)
+        if (previous_run and getattr(previous_run, 'simulation_completed', False)
+                and previous_run.runner_status not in {RunnerStatus.COMPLETED, RunnerStatus.STOPPED}):
+            return jsonify(success=False, code='memory_recovery_required',
+                error='The simulation is complete. Retry saving findings instead of restarting.'), 409
+
         force_restarted = False
         
         # 智能处理状态：如果准备工作已完成，允许重新启动
@@ -1879,6 +1885,21 @@ def start_simulation():
         }), 500
 
 
+@simulation_bp.route('/retry-memory', methods=['POST'])
+def retry_memory():
+    data = request.get_json(silent=True) or {}
+    simulation_id = data.get('simulation_id')
+    if not simulation_id:
+        return jsonify(success=False, error=t('api.requireSimulationId')), 400
+    try:
+        state = SimulationRunner.retry_memory(simulation_id)
+        return jsonify(success=True, data=state.to_dict())
+    except ValueError as error:
+        return jsonify(success=False, error=str(error)), 400
+    except Exception as error:
+        return jsonify(success=False, error=str(error)), 409
+
+
 @simulation_bp.route('/stop', methods=['POST'])
 def stop_simulation():
     """
@@ -1962,6 +1983,18 @@ def stop_simulation():
 
 
 # ============== 实时状态监控接口 ==============
+
+@simulation_bp.route('/<simulation_id>/memory-progress', methods=['GET'])
+def get_memory_progress(simulation_id: str):
+    from ..services.memory_progress import read_memory_progress
+    try:
+        return jsonify(success=True, data=read_memory_progress(simulation_id))
+    except ValueError as error:
+        return jsonify(success=False, error=str(error)), 400
+    except Exception:
+        logger.exception('Could not read saved findings progress for %s', simulation_id)
+        return jsonify(success=False, error='Saving progress is temporarily unavailable'), 503
+
 
 @simulation_bp.route('/<simulation_id>/run-status', methods=['GET'])
 def get_run_status(simulation_id: str):
