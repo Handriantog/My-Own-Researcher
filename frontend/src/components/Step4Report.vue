@@ -1,5 +1,5 @@
 <template>
-  <div class="report-panel">
+  <div class="report-panel" :class="{ 'report-complete': isComplete }">
     <RecoveryBanner :error="reportError" :retry-key="`report:${reportId}`" :auto-retry="!!reportId" :completed="isComplete && !reportError" :busy="recovering" :label="$t(connectionError ? 'recovery.reconnect' : 'recovery.resume')" :hint="$t('recovery.saved')" @retry="recoverReport" />
     <!-- Main Split Layout -->
     <div class="main-split-layout">
@@ -14,7 +14,14 @@
             </div>
             <h1 class="main-title">{{ reportOutline.title }}</h1>
             <p class="sub-title">{{ reportOutline.summary }}</p>
-            <ReportDownload :report-id="reportId" :disabled="!isComplete" />
+            <div class="report-actions">
+              <ReportDownload :report-id="reportId" :disabled="!isComplete" />
+              <button v-if="isComplete" type="button" class="follow-up-btn" @click="goToInteraction">
+                {{ $t('step4.goToInteraction') }}
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+            <p v-if="isComplete" class="follow-up-hint">{{ $t('step4.optionalFollowUp') }}</p>
             <div class="header-divider"></div>
           </div>
 
@@ -79,7 +86,7 @@
       </div>
 
       <!-- RIGHT PANEL: Workflow Timeline -->
-      <div class="right-panel" ref="rightPanel">
+      <div v-if="!isComplete" class="right-panel" ref="rightPanel">
         <div class="panel-header" :class="`panel-header--${activeStep.status}`" v-if="!isComplete">
           <span class="header-dot" v-if="activeStep.status === 'active'"></span>
           <span class="header-index mono">{{ activeStep.noLabel }}</span>
@@ -128,15 +135,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Next Step Button - 在完成后显示 -->
-          <button v-if="isComplete" class="next-step-btn" @click="goToInteraction">
-            <span>{{ $t('step4.goToInteraction') }}</span>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
-          </button>
 
           <div class="workflow-divider"></div>
         </div>
@@ -377,7 +375,7 @@
     </div>
 
     <!-- Bottom Console Logs -->
-    <div class="console-logs">
+    <div v-if="!isComplete" class="console-logs">
       <div class="log-header">
         <span class="log-title">CONSOLE OUTPUT</span>
         <span class="log-id">{{ reportId || 'NO_REPORT' }}</span>
@@ -2064,6 +2062,8 @@ const fetchAgentLog = async () => {
           
           if (log.action === 'report_complete') {
             isComplete.value = true
+            reportError.value = ''
+            connectionError.value = false
             currentSectionIndex.value = null  // 确保清除 loading 状态
             emit('update-status', 'completed')
             stopPolling()
@@ -2165,6 +2165,7 @@ const fetchConsoleLog = async () => {
 }
 
 const failReport = (message, connection = false) => {
+  if (isComplete.value) return
   reportError.value = message || t('common.unknownError')
   connectionError.value = connection
   currentSectionIndex.value = null
@@ -2186,6 +2187,8 @@ const fetchReportStatus = async () => {
     if (data.status === 'failed') failReport(data.error)
     else if (data.status === 'completed') {
       isComplete.value = true
+      reportError.value = ''
+      connectionError.value = false
       currentSectionIndex.value = null
       emit('update-status', 'completed')
       stopPolling()
@@ -2393,6 +2396,46 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   flex-direction: column;
   padding: 30px 50px 60px 50px;
+}
+
+.report-complete .left-panel.report-style {
+  width: 100%;
+  min-width: 0;
+  border-right: 0;
+  padding-inline: clamp(20px, 5vw, 60px);
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.report-actions :deep(.report-download) { margin: 0; }
+
+.follow-up-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #263b45;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.follow-up-btn:hover { background: #F3F4F6; }
+.follow-up-btn:focus-visible { outline: 3px solid #85b4c0; outline-offset: 3px; }
+.follow-up-hint { margin: 10px 0 0; color: #6B7280; font-size: 12px; }
+
+@media (max-width: 600px) {
+  .report-complete .main-title { font-size: 28px; }
+  .report-complete .report-meta { flex-wrap: wrap; }
 }
 
 .left-panel::-webkit-scrollbar {

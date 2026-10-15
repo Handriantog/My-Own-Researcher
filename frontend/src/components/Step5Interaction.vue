@@ -91,6 +91,7 @@
             <span class="action-bar-title">{{ $t('step5.interactiveTools') }}</span>
             <span class="action-bar-subtitle mono">{{ $t('step5.agentsAvailable', { count: profiles.length }) }}</span>
           </div>
+          <RouterLink class="read-report-link" :to="{ name: 'Report', params: { reportId } }">{{ $t('step5.readReport') }}</RouterLink>
         </div>
           <div class="action-bar-tabs">
             <button 
@@ -106,8 +107,12 @@
             <div class="agent-dropdown" v-if="profiles.length > 0">
               <button 
                 class="tab-pill agent-pill"
+                ref="agentDropdownTrigger"
                 :class="{ active: activeTab === 'chat' && chatTarget === 'agent' }"
+                :aria-expanded="showAgentDropdown"
+                aria-controls="individual-chat-options"
                 @click="toggleAgentDropdown"
+                @keydown.esc="closeAgentDropdown"
               >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -118,21 +123,6 @@
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
-              <div v-if="showAgentDropdown" class="dropdown-menu">
-                <div class="dropdown-header">{{ $t('step5.selectChatTarget') }}</div>
-                <div 
-                  v-for="(agent, idx) in profiles" 
-                  :key="idx"
-                  class="dropdown-item"
-                  @click="selectAgent(agent, idx)"
-                >
-                  <div class="agent-avatar">{{ (agent.username || 'A')[0] }}</div>
-                  <div class="agent-info">
-                    <span class="agent-name">{{ agent.username }}</span>
-                    <span class="agent-role">{{ agent.profession || $t('step2.unknownProfession') }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
             <div class="tab-divider"></div>
             <button
@@ -149,6 +139,17 @@
           </div>
         </div>
 
+        <div class="interaction-content">
+          <div v-if="showAgentDropdown" id="individual-chat-options" ref="agentDropdownMenu" class="dropdown-menu" @keydown.esc="closeAgentDropdown">
+            <div class="dropdown-header">{{ $t('step5.selectChatTarget') }}</div>
+            <button v-for="(agent, idx) in profiles" :key="idx" type="button" class="dropdown-item" @click="selectAgent(agent, idx)">
+              <span class="agent-avatar">{{ (agent.username || 'A')[0] }}</span>
+              <span class="agent-info">
+                <span class="agent-name">{{ agent.username }}</span>
+                <span class="agent-role">{{ agent.profession || $t('step2.unknownProfession') }}</span>
+              </span>
+            </button>
+          </div>
         <!-- Chat Mode -->
         <div v-if="activeTab === 'chat'" class="chat-container">
 
@@ -409,6 +410,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -441,10 +443,12 @@ const pendingSurvey = ref(null)
 const activeTab = ref('chat')
 const chatTarget = ref('report_agent')
 const showAgentDropdown = ref(false)
+const agentDropdownTrigger = ref(null)
+const agentDropdownMenu = ref(null)
 const selectedAgent = ref(null)
 const selectedAgentIndex = ref(null)
-const showFullProfile = ref(true)
-const showToolsDetail = ref(true)
+const showFullProfile = ref(false)
+const showToolsDetail = ref(false)
 
 // Chat State
 const chatInput = ref('')
@@ -538,10 +542,11 @@ const selectSurveyTab = () => {
 const toggleAgentDropdown = () => {
   if (isSending.value) return
   showAgentDropdown.value = !showAgentDropdown.value
-  if (showAgentDropdown.value) {
-    activeTab.value = 'chat'
-    chatTarget.value = 'agent'
-  }
+}
+
+const closeAgentDropdown = () => {
+  showAgentDropdown.value = false
+  nextTick(() => agentDropdownTrigger.value?.focus())
 }
 
 const selectAgent = (agent, idx) => {
@@ -549,10 +554,11 @@ const selectAgent = (agent, idx) => {
   // 保存当前对话记录
   saveChatHistory()
   
+  activeTab.value = 'chat'
   selectedAgent.value = agent
   selectedAgentIndex.value = idx
   chatTarget.value = 'agent'
-  showAgentDropdown.value = false
+  closeAgentDropdown()
   
   // 恢复该 Agent 的对话记录
   chatHistory.value = chatHistoryCache.value[`agent_${idx}`] || []
@@ -964,8 +970,7 @@ const restoreChats = () => {
 
 // Click outside to close dropdown
 const handleClickOutside = (e) => {
-  const dropdown = document.querySelector('.agent-dropdown')
-  if (dropdown && !dropdown.contains(e.target)) {
+  if (!agentDropdownTrigger.value?.contains(e.target) && !agentDropdownMenu.value?.contains(e.target)) {
     showAgentDropdown.value = false
   }
 }
@@ -997,6 +1002,7 @@ watch(() => props.simulationId, (newId) => {
 
 <style scoped>
 .interaction-panel {
+  container-type: inline-size;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1013,6 +1019,7 @@ watch(() => props.simulationId, (newId) => {
 /* Main Split Layout */
 .main-split-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 }
@@ -1020,7 +1027,7 @@ watch(() => props.simulationId, (newId) => {
 /* Left Panel - Report Style (与 Step4Report.vue 完全一致) */
 .left-panel.report-style {
   width: 45%;
-  min-width: 450px;
+  min-width: 0;
   background: #FFFFFF;
   border-right: 1px solid #E5E7EB;
   overflow-y: auto;
@@ -1339,6 +1346,8 @@ watch(() => props.simulationId, (newId) => {
 /* Right Panel - Interaction */
 .right-panel {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #FFFFFF;
@@ -1347,6 +1356,9 @@ watch(() => props.simulationId, (newId) => {
 
 /* Action Bar - Professional Design */
 .action-bar {
+  position: relative;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1361,6 +1373,12 @@ watch(() => props.simulationId, (newId) => {
   align-items: center;
   gap: 12px;
   min-width: 160px;
+}
+
+.read-report-link { margin-left: 12px; color: #263b45; font-size: 12px; white-space: nowrap; }
+
+@container (max-width: 1000px) {
+  .left-panel.report-style { display: none; }
 }
 
 .action-bar-icon {
@@ -1392,6 +1410,7 @@ watch(() => props.simulationId, (newId) => {
 
 .action-bar-tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   flex: 1;
@@ -1411,7 +1430,9 @@ watch(() => props.simulationId, (newId) => {
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: left;
+  max-width: 100%;
 }
 
 .tab-pill:hover {
@@ -1450,7 +1471,8 @@ watch(() => props.simulationId, (newId) => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   text-align: left;
 }
 
@@ -1515,9 +1537,39 @@ watch(() => props.simulationId, (newId) => {
 /* Chat Container */
 .chat-container {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.interaction-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-agent-tools-card,
+.agent-profile-card {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+}
+
+@container (max-width: 600px) {
+  .action-bar { padding: 12px; gap: 12px; }
+  .action-bar-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-basis: 100%;
+  }
+  .agent-pill { width: 100%; height: 100%; }
+  .tab-pill { padding: 8px 10px; }
+  .tab-divider { display: none; }
+  .survey-pill { grid-column: 1 / -1; justify-content: center; }
+  .chat-messages { padding: 16px; }
 }
 
 /* Report Agent Tools Card */
@@ -1839,7 +1891,8 @@ watch(() => props.simulationId, (newId) => {
 
 /* Agent Dropdown */
 .agent-dropdown {
-  position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dropdown-arrow {
@@ -1854,16 +1907,17 @@ watch(() => props.simulationId, (newId) => {
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 240px;
+  top: 6px;
+  right: 16px;
+  width: min(360px, calc(100% - 32px));
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
-  max-height: 320px;
+  max-height: min(320px, calc(100% - 12px));
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   z-index: 100;
 }
 
@@ -1881,6 +1935,11 @@ watch(() => props.simulationId, (newId) => {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  border: 0;
+  background: #FFFFFF;
+  font: inherit;
+  text-align: left;
   padding: 10px 16px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1891,6 +1950,8 @@ watch(() => props.simulationId, (newId) => {
   background: #F9FAFB;
   border-left-color: #1F2937;
 }
+
+.dropdown-item:focus-visible { outline: 2px solid #263b45; outline-offset: -2px; }
 
 .dropdown-item:first-of-type {
   margin-top: 4px;
@@ -1937,9 +1998,9 @@ watch(() => props.simulationId, (newId) => {
 .agent-role {
   font-size: 11px;
   color: #9CA3AF;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 
 /* Chat Messages */

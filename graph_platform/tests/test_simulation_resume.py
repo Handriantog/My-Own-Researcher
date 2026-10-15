@@ -57,3 +57,27 @@ def test_authenticated_api_exposes_simulation_resume(tmp_path):
     response = client.post('/v1/rpc', json=request, headers={'X-Research-Token': token})
     assert response.status_code == 200
     assert response.json()['episode_uuids'] == [items[1]['uuid'], items[2]['uuid']]
+
+
+def test_saved_activity_recovery_reconciles_accepted_writes_and_uploads_only_missing(tmp_path):
+    store, items = broken_simulation(tmp_path)
+    accepted = store.episode(items[1]['uuid'])
+    payload = {key: accepted[key] for key in ('type', 'data', 'metadata', 'created_at')}
+    missing = {**payload, 'data': 'Activity rejected while graph was failed'}
+    result = store.resume_simulation('g1', 'sim1', episodes=[payload, missing])
+    assert len(store.episodes(graph_id='g1')) == 4
+    assert items[0]['uuid'] not in result['episode_uuids']
+    assert items[1]['uuid'] in result['episode_uuids']
+    again = store.resume_simulation('g1', 'sim1', episodes=[payload, missing])
+    assert set(again['episode_uuids']) == set(result['episode_uuids'])
+    assert len(store.episodes(graph_id='g1')) == 4
+
+
+def test_recovery_validates_all_activity_before_unlocking_graph(tmp_path):
+    store, items = broken_simulation(tmp_path)
+    invalid = {'type': 'text', 'data': 'Wrong simulation', 'created_at': '2026-10-15',
+               'metadata': {'source': 'mirofish_simulation', 'simulation_id': 'other'}}
+    with pytest.raises(ValueError, match='simulation'):
+        store.resume_simulation('g1', 'sim1', episodes=[invalid])
+    assert store.graph('g1')['state'] == 'failed'
+    assert len(store.episodes(graph_id='g1')) == 3

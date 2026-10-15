@@ -88,7 +88,7 @@ def create_app(store, engine, token):
                 return store.add_episode(p['graph_id'], p['type'], p['data'],
                                          **{k: v for k, v in p.items() if k not in {'graph_id', 'type', 'data'}})
             if op == 'simulation.resume':
-                return store.resume_simulation(p['graph_id'], p['simulation_id'])
+                return store.resume_simulation(p['graph_id'], p['simulation_id'], episodes=p.get('episodes'))
             if op == 'graph.search':
                 return await engine.search(**p)
             if op == 'graph.page':

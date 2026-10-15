@@ -19,12 +19,7 @@
       </div>
 
       <div class="header-right">
-        <div class="workflow-step">
-          <span class="step-num">Step 4/5</span>
-          <span class="step-name">{{ $tm('main.stepNames')[3] }}</span>
-        </div>
-        <div class="step-divider"></div>
-        <span class="status-indicator" :class="statusClass">
+        <span class="status-indicator" :class="statusClass" role="status">
           <span class="dot"></span>
           {{ statusText }}
         </span>
@@ -121,9 +116,9 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (currentStatus.value === 'error') return 'Error'
-  if (currentStatus.value === 'completed') return 'Completed'
-  return 'Generating'
+  if (currentStatus.value === 'error') return t('step4.reportError')
+  if (currentStatus.value === 'completed') return t('step4.reportComplete')
+  return t('step4.reportGenerating')
 })
 
 // --- Helpers ---

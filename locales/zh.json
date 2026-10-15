@@ -251,7 +251,11 @@
   },
   "step4": {
     "generatingSection": "正在生成{title}...",
-    "goToInteraction": "进入深度互动",
+    "goToInteraction": "继续提问",
+    "optionalFollowUp": "报告已完成。您可以选择继续提问。",
+    "reportComplete": "报告已完成",
+    "reportGenerating": "正在生成报告",
+    "reportError": "报告需要处理",
     "waitingForReportAgent": "Waiting for Report Agent...",
     "collapse": "收起 ▲",
     "expandAll": "展开全部 {count} 条 ▼",
@@ -292,6 +296,9 @@
     "world2": "世界2"
   },
   "step5": {
+    "followUpTitle": "后续提问",
+    "optional": "可选",
+    "readReport": "阅读报告",
     "interactiveTools": "Interactive Tools",
     "agentsAvailable": "{count} agents available",
     "chatWithReportAgent": "与Report Agent对话",
@@ -721,7 +728,9 @@
     "interrupted": "在收到回复前连接已中断，请重试此消息。",
     "selectFiles": "重新选择文件",
     "missingFiles": "此浏览器标签页中的待上传文件已丢失，请重新选择文件继续。",
-    "retrying": "Retrying {attempt}/{max}…"
+    "retrying": "Retrying {attempt}/{max}…",
+    "retryMemory": "重试保存研究发现",
+    "memoryHint": "模拟已完成。重试保存已记录的活动，然后继续生成报告。"
   },
   "reportExport": {
     "downloadPdf": "Download PDF",
@@ -936,5 +945,53 @@
     "openReport": "报告",
     "showLess": "收起",
     "showAll": "查看全部最近研究"
+  },
+  "runProgress": {
+    "reconnecting": "连接中断 · 正在重试",
+    "lastChecked": "{seconds} 秒前检查",
+    "connecting": "正在连接…",
+    "fullQuestion": "展开完整问题",
+    "collapseQuestion": "收起问题",
+    "view": "研究视图",
+    "graph": "图谱",
+    "split": "分屏",
+    "activity": "动态",
+    "graphCounts": "{nodes} 个实体 · {edges} 条关系",
+    "currentStep": "当前步骤",
+    "live": "实时",
+    "saved": "已保存状态",
+    "profiles": "已准备 {current} / {total} 个人设",
+    "actions": "{count} 次动作",
+    "detailError": "部分实时详情刷新失败，正在显示最近可用的数据。",
+    "terminal": "运行日志",
+    "follow": "跟随最新",
+    "waitingActivity": "等待下一条动态…",
+    "logNote": "最近 200 条已观察事件。此前的日志从打开此页面时开始记录。",
+    "graphWaiting": "随着文档分析和提取进行，图谱将在此显示。",
+    "graphEmpty": "等待图谱实体，新增数据会自动显示。",
+    "done": "已完成",
+    "waiting": "等待中",
+    "working": "进行中…",
+    "complete": "研究已完成，可以打开报告。",
+    "hints": {
+      "analysis": "正在分析源文档，识别实体与关系类型。",
+      "graph": "正在构建知识图谱，提取的实体和关系会逐步显示。",
+      "preparation": "正在准备人设及模拟设置。",
+      "simulation": "模拟参与者正在执行动作，最新动态将在下方显示。",
+      "memory": "正在保存模拟产生的图谱记忆，随后生成报告。",
+      "report": "正在分析已记录的证据并撰写报告。"
+    },
+    "memoryBatches": "本次已保存 {current} / {total} 个批次",
+    "memoryQueue": "{processing} 个正在处理 · {queued} 个等待中",
+    "memoryFailed": "{count} 个需要重试",
+    "memoryUnknown": "{count} 个状态暂不可用",
+    "memoryFinalizing": "所有批次已保存，正在准备生成报告…",
+    "memoryElapsed": "已用时：{duration}",
+    "memoryCalls": "本次保存已完成 {count} 次 AI 调用",
+    "memoryActivity": "最近的 AI 活动：{duration} 前",
+    "memoryPreparing": "正在检查已记录的活动队列…",
+    "memoryExplanation": "AI 正在从已记录的活动中提取事实和关系，并与图谱中的信息核对。批次按顺序处理，每批可能需要数分钟。每保存一个批次，进度就会更新。",
+    "seconds": "{count} 秒",
+    "minutes": "{count} 分钟"
   }
 }

@@ -32,13 +32,15 @@ class ResearchStages:
             raise RuntimeError(value.get('error') or 'Research stage failed')
         return value.get('data',value)
 
-    def wait(self, poll, stopped, update, *, terminal, failed=('failed',), key='status'):
+    def wait(self, poll, stopped, update, *, terminal, failed=('failed',), key='status', rounds_only=False):
         while True:
             if stopped():
                 raise ResearchStopped('Research stopped')
             value = poll()
-            update(stage_progress={key:value[key] for key in ('status','runner_status','progress','current_round','total_rounds','total_actions_count','message','error') if key in value})
+            update(stage_progress={key:value[key] for key in ('status','runner_status','progress','current_round','total_rounds','total_actions_count','message','error','simulation_completed','memory_status') if key in value})
             state = value.get(key)
+            if rounds_only and value.get('simulation_completed'):
+                return value
             if state in terminal:
                 return value
             if state in failed:
@@ -107,6 +109,8 @@ class ResearchStages:
                                      plan=plan, observations=request_observations(records, settings)))
         elif stage == 'simulation':
             state = SimulationRunner.get_run_state(run['simulation_id'])
+            if state and getattr(state, 'simulation_completed', False):
+                return
             if state is None or state.runner_status not in {RunnerStatus.RUNNING,RunnerStatus.STARTING,RunnerStatus.COMPLETED}:
                 self.call('/simulation/start',{'simulation_id':run['simulation_id'],
                     'platform':settings['platform'],'simulation_effort':settings['depth'],
@@ -116,14 +120,18 @@ class ResearchStages:
                 # Natural OASIS completion can leave its interview process alive.
                 # Runner finalizes memory and reports completed once all selected platforms finish.
                 return value
-            self.wait(poll,stopped,update,terminal={'completed'},failed={'failed','stopped'},key='runner_status')
+            self.wait(poll,stopped,update,terminal={'completed'},failed={'failed','stopped'},key='runner_status',rounds_only=True)
         elif stage == 'memory':
             # Terminal runner status is only published after memory finalization.
             state = SimulationRunner.get_run_state(run['simulation_id'])
             if state is None:
                 raise RuntimeError('Simulation results are missing')
             if state.runner_status not in {RunnerStatus.COMPLETED,RunnerStatus.STOPPED}:
-                self.call('/simulation/stop',{'simulation_id':run['simulation_id'],'wait':False})
+                if getattr(state, 'simulation_completed', False):
+                    if state.runner_status == RunnerStatus.FAILED:
+                        self.call('/simulation/retry-memory', {'simulation_id':run['simulation_id']})
+                else:
+                    self.call('/simulation/stop',{'simulation_id':run['simulation_id'],'wait':False})
                 self.wait(lambda:self.call('/simulation/'+run['simulation_id']+'/run-status',method='GET'),
                           stopped,update,terminal={'stopped','completed'},key='runner_status')
             self.synchronize_usage(run)

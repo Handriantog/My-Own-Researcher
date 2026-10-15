@@ -264,9 +264,21 @@ class GraphStore:
             db.execute("UPDATE batches SET state='processing' WHERE id=?", (batch_id,))
         return self.batch(batch_id)
 
-    def resume_simulation(self, graph_id, simulation_id):
+    def resume_simulation(self, graph_id, simulation_id, *, episodes=None):
         """Retry one simulation's standalone episodes without replaying successes."""
         identifier(simulation_id)
+        if episodes is not None and not isinstance(episodes, list):
+            raise ValueError('Saved simulation episodes must be a list')
+        for item in episodes or []:
+            metadata = item.get('metadata') or {}
+            if (metadata.get('source') != 'mirofish_simulation' or metadata.get('simulation_id') != simulation_id
+                    or item.get('type') != 'text' or not isinstance(item.get('data'), str)
+                    or not item['data'].strip() or not item.get('created_at')):
+                raise ValueError('Saved activity does not match this simulation')
+        def signature(payload):
+            # Match legacy random IDs too: an accepted write with a lost response
+            # must retain its original extraction checkpoint, never be uploaded twice.
+            return json.dumps({k: payload.get(k) for k in ('type', 'data', 'created_at', 'metadata')}, sort_keys=True)
         with self.connection(write=True) as db:
             graph = self._graph(db, graph_id)
             if graph['state'] not in {'active', 'failed'}:
@@ -280,13 +292,23 @@ class GraphStore:
                     owned.append(row)
                 elif row['state'] in {'running', 'failed', 'canceled'}:
                     raise RuntimeError('Graph has other unfinished ingestion; recover that operation first')
-            if not owned:
+            known = {signature(json.loads(row['payload'])) for row in owned}
+            for payload in episodes or []:
+                key = signature(payload)
+                if key in known:
+                    continue
+                eid = str(uuid.uuid5(uuid.NAMESPACE_URL, graph_id + ':' + key))
+                db.execute('INSERT INTO episodes VALUES (?,?,?,?,?,?,?,?)',
+                           (eid, graph_id, None, None, json.dumps(payload), 'queued', None, now()))
+                owned.append(db.execute('SELECT * FROM episodes WHERE id=?', (eid,)).fetchone())
+                known.add(key)
+            if not owned and episodes is None:
                 raise ValueError('No saved ingestion belongs to this simulation')
             for row in owned:
                 if row['state'] in {'failed', 'canceled'}:
                     db.execute("UPDATE episodes SET state='queued',error=NULL WHERE id=?", (row['id'],))
             db.execute("UPDATE graphs SET state='active' WHERE id=?", (graph_id,))
-            return {'episode_uuids': [row['id'] for row in owned if row['state'] != 'succeeded'],
+            return {'reconciled': episodes is not None, 'episode_uuids': [row['id'] for row in owned if row['state'] != 'succeeded'],
                     'total': len(owned), 'succeeded': sum(row['state'] == 'succeeded' for row in owned)}
 
     def claim_next(self):
