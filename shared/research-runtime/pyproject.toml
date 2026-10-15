@@ -1,9 +1,9 @@
 [project]
-name = "research-codex-transport"
+name = "research-inference-runtime"
 version = "0.1.0"
-description = "Shared supervised agent CLI inference transports"
+description = "MyOwnResearcher run context, scheduling, telemetry and inference adapters"
 requires-python = ">=3.11"
-dependencies = ["jsonschema>=4.0.0"]
+dependencies = ["myown-llm-integrator==0.1.0"]
 
 [build-system]
 requires = ["hatchling"]

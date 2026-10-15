@@ -582,8 +582,9 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "graphiti-core" },
+    { name = "myown-llm-integrator" },
     { name = "python-dotenv" },
-    { name = "research-codex-transport" },
+    { name = "research-inference-runtime" },
     { name = "sentence-transformers" },
     { name = "uvicorn" },
 ]
@@ -599,8 +600,9 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "graphiti-core", specifier = "==0.30.2" },
+    { name = "myown-llm-integrator", editable = "../node_modules/myown-llm-integrator/python" },
     { name = "python-dotenv", specifier = ">=1" },
-    { name = "research-codex-transport", editable = "../shared/codex-transport" },
+    { name = "research-inference-runtime", editable = "../shared/research-runtime" },
     { name = "sentence-transformers", specifier = ">=3.2.1,<6" },
     { name = "uvicorn", specifier = ">=0.30,<1" },
 ]
@@ -611,6 +613,24 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
 ]
+
+[[package]]
+name = "myown-llm-integrator"
+version = "0.1.0"
+source = { editable = "../node_modules/myown-llm-integrator/python" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "referencing" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jsonschema", specifier = ">=4.18.0,<5" },
+    { name = "referencing", specifier = ">=0.28.4,<1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8,<10" }]
 
 [[package]]
 name = "narwhals"
@@ -1158,15 +1178,15 @@ wheels = [
 ]
 
 [[package]]
-name = "research-codex-transport"
+name = "research-inference-runtime"
 version = "0.1.0"
-source = { editable = "../shared/codex-transport" }
+source = { editable = "../shared/research-runtime" }
 dependencies = [
-    { name = "jsonschema" },
+    { name = "myown-llm-integrator" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.0.0" }]
+requires-dist = [{ name = "myown-llm-integrator", specifier = "==0.1.0" }]
 
 [[package]]
 name = "rich"

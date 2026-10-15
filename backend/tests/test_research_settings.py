@@ -104,26 +104,34 @@ def test_refinement_uses_observed_sizes_from_the_selected_model_only():
     assert request_observations(records[:1],chosen)=={}
 
 
-def test_codex_discovery_falls_back_to_cli_catalog_without_claiming_account_access(monkeypatch):
-    import subprocess
+def test_codex_discovery_falls_back_to_cli_catalog_without_claiming_account_access(monkeypatch, tmp_path):
+    import sys
     from app.services import research_settings as service
+    log = tmp_path / 'commands.jsonl'
+    binary = tmp_path / 'codex'
+    # Exercise the published package's CLI boundary rather than mocking its
+    # subprocess implementation. The fallback remains metadata-only.
+    binary.write_text(f'''#!{sys.executable}
+import json,sys
+with open({str(log)!r}, 'a') as output:
+    output.write(json.dumps(sys.argv[1:]) + '\\n')
+if sys.argv[-2:] == ['login', 'status']:
+    print('Logged in using ChatGPT')
+else:
+    assert sys.argv[-2:] == ['debug', 'models']
+    print(json.dumps({{'models': [
+        {{'slug': 'gpt-6-astra', 'display_name': 'GPT-6-Astra', 'visibility': 'list'}},
+        {{'slug': 'internal-hidden', 'display_name': 'Hidden', 'visibility': 'hide'}}
+    ]}}))
+''')
+    binary.chmod(0o700)
+    monkeypatch.setenv('CODEX_BIN', str(binary))
     monkeypatch.setattr(service,'configured_provider',lambda:'codex')
     monkeypatch.setattr(service,'configured_model',lambda provider:None)
-    monkeypatch.setattr(service.shutil,'which',lambda binary:'/test/codex')
     monkeypatch.setattr(service,'_codex_catalog',lambda binary:(_ for _ in ()).throw(ValueError('Metadata unavailable')))
-    calls=[]
-    def run(args,**kwargs):
-        calls.append(args)
-        assert kwargs['timeout']<=5
-        if args[-2:]==['login','status']:
-            return subprocess.CompletedProcess(args,0,'Logged in using ChatGPT','')
-        assert args[-2:]==['debug','models']
-        return subprocess.CompletedProcess(args,0,json.dumps({'models':[
-            {'slug':'gpt-6-astra','display_name':'GPT-6-Astra','visibility':'list'},
-            {'slug':'internal-hidden','display_name':'Hidden','visibility':'hide'}]}),'')
-    monkeypatch.setattr(service.subprocess,'run',run)
     result=service.provider_metadata()
     assert result['models']==[{'id':'gpt-6-astra','name':'GPT-6-Astra','source':'catalog'}]
     assert result['connection']=='connected'
     assert result['discovery']=='catalog'
-    assert len(calls)==2
+    calls = [json.loads(line) for line in log.read_text().splitlines()]
+    assert calls == [['--no-daemon', 'login', 'status'], ['--no-daemon', 'debug', 'models']]

@@ -30,7 +30,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
     "jsonschema>=4.0.0",
-    "research-codex-transport",
+    "research-inference-runtime",
+    "myown-llm-integrator==0.1.0",
     "markdown-it-py>=3,<5",
 ]
 
@@ -55,4 +56,5 @@ dev = [
 packages = ["app", "research_mcp"]
 
 [tool.uv.sources]
-research-codex-transport = { path = "../shared/codex-transport", editable = true }
+research-inference-runtime = { path = "../shared/research-runtime", editable = true }
+myown-llm-integrator = { path = "../node_modules/myown-llm-integrator/python", editable = true }

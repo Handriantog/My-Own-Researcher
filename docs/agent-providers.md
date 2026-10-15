@@ -107,7 +107,8 @@ you need to paste into `.env`. MiroFish builds argv directly, adds its inference
 instructions, and decodes the selected output format. Use `AGENT_MODEL` for the
 CLI's model option and `AGENT_COMMAND_JSON` for a different invocation. The exact
 flags applied by this checkout are in
-[`presets.py`](../shared/codex-transport/research_agents/presets.py).
+[`presets.py`](https://github.com/Handriantog/My-Own-LLM-Integrator/blob/main/python/myown_llm_integrator/presets.py)
+in the [shared npm integration](llm-integrator.md).
 
 Cursor and Kimi receive prompts as argv arguments. Very large requests can exceed
 the operating system's argument limit, and the arguments may be visible in
