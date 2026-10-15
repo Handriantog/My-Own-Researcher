@@ -8,9 +8,10 @@ The graph database, ingestion journal, embeddings, and reranking run locally. La
 
 ## Installation
 
-Requirements: macOS, Linux, or WSL, Node.js 22.12+, uv, Python 3.11–3.12, Docker with Compose, and an installed [Codex CLI](https://learn.chatgpt.com/docs/cli). Docker must be running. From a checkout of this repository:
+Requirements: macOS, Linux, or WSL, Node.js 22.12+, uv, Python 3.11–3.12, Docker with Compose, and an installed [Codex CLI](https://learn.chatgpt.com/docs/cli). Docker must be running. Keep the `MyOwnLlmIntegrator` repository beside this checkout; see [shared integration setup](llm-integrator.md). From a checkout of this repository:
 
 ```sh
+npm ci --prefix ../MyOwnLlmIntegrator
 npm ci
 npm ci --prefix frontend
 uv sync --project backend --frozen
@@ -40,7 +41,8 @@ For later starts, use `npm run graph:up` then `npm run dev`. For agent-only use,
 | Neo4j Community 5.26 | `127.0.0.1:7687` / `127.0.0.1:7474` | Graphiti entities, temporal facts, and provenance |
 | SQLite journal | `backend/uploads/local_graph/` | Graph identity, ontology, jobs, progress, and errors |
 | Projects and runs | `backend/uploads/` | Documents, profiles, simulation state, checkpoints, and reports |
-| Shared agent CLI transport | `shared/codex-transport/` | Cross-process request serialization and cancellation |
+| Subscription inference engine | `node_modules/myown-llm-integrator/python/` | npm-delivered CLI execution and provider integration |
+| Research inference runtime | `shared/research-runtime/` | Run context, cross-process scheduling, usage and engine adapters |
 
 Graph API documentation is available at http://127.0.0.1:5002/docs; mutations require the private `X-Research-Token` header. Keep that token private.
 

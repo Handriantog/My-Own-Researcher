@@ -9,11 +9,13 @@ dependencies = [
     "fastapi>=0.115,<1",
     "uvicorn>=0.30,<1",
     "python-dotenv>=1",
-    "research-codex-transport",
+    "research-inference-runtime",
+    "myown-llm-integrator==0.1.0",
 ]
 
 [tool.uv.sources]
-research-codex-transport = { path = "../shared/codex-transport", editable = true }
+research-inference-runtime = { path = "../shared/research-runtime", editable = true }
+myown-llm-integrator = { path = "../node_modules/myown-llm-integrator/python", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "httpx>=0.27"]

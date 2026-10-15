@@ -4,7 +4,9 @@
 # Python 3.11+ required
 # Install from backend/: pip install -r requirements.txt
 # Prefer uv sync --project backend from the repository root.
--e ../shared/codex-transport
+# Run npm install at the repository root first.
+-e ../node_modules/myown-llm-integrator/python
+-e ../shared/research-runtime
 # ===========================================
 
 # ============= 核心框架 =============

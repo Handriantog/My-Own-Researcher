@@ -111,11 +111,14 @@ The quickstart uses the [Codex CLI](https://learn.chatgpt.com/docs/cli) with you
 
 ### 2. Set up the workbench
 
-If you already cloned the repository for the demo, start at `npm ci` from that checkout.
+Keep `MyOwnLlmIntegrator` beside this repository under `MyOwnStack`. The local
+subscription engine is now an npm dependency; see [the extraction/setup guide](docs/llm-integrator.md).
+If you already cloned the repository for the demo, start with the integrator build below.
 
 ```sh
 git clone https://github.com/Handriantog/My-Own-Researcher.git
 cd My-Own-Researcher
+npm ci --prefix ../MyOwnLlmIntegrator
 npm ci
 npm ci --prefix frontend
 uv sync --project backend --frozen
