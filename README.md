@@ -14,11 +14,12 @@
   <a href="#install-and-run">Get started</a> ·
   <a href="#choose-your-inference-provider">Choose your AI</a> ·
   <a href="#use-it-from-another-ai-agent">Connect an agent</a> ·
+  <a href="#part-of-myownstack">MyOwnStack</a> ·
   <a href="README-ZH.md">中文</a>
 </p>
 
 <p align="center">
-  <strong>15 agent CLI options</strong> &nbsp; / &nbsp;
+  <strong>Your AI subscription</strong> &nbsp; / &nbsp;
   <strong>Local graph storage</strong> &nbsp; / &nbsp;
   <strong>Browser + MCP</strong>
 </p>
@@ -30,6 +31,8 @@ A proposal lands on your desk. The facts are scattered, the stakeholders want di
 **📄 Sources → 🕸️ Knowledge graph → 👥 Simulated discussion → 📝 Report → 💬 Follow-up**
 
 Upload a PDF, Markdown, or text file, then bring a question: *What assumptions are we missing? Where might people disagree? What would need to be true for this to work?*
+
+Part of **MyOwnStack** — local services that use your own AI accounts. Subscription inference is powered by **[MyOwnLlmIntegrator](https://www.npmjs.com/package/myown-llm-integrator)**, our shared npm package, installed automatically with the app's dependencies.
 
 An independent fork of **[MiroFish](https://github.com/666ghj/MiroFish)**, licensed under [AGPL-3.0](LICENSE).
 
@@ -67,7 +70,8 @@ Prefer to read the artifacts? Open the [source brief](frontend/public/demo/loopl
 | --- | --- |
 | 🔑 **Bring your AI account** | Use your ChatGPT-authenticated Codex CLI, or choose from 14 additional agent CLIs. Default local mode needs no LLM API key and never automatically falls back to a paid API. |
 | 🕸️ **Keep the graph local** | Graphiti + Neo4j store your graph on your machine. No Zep account or key required in local mode. |
-| 🎛️ **Choose the pace** | Quick, Moderate, and Full round budgets; confirmed early stopping; clearly labeled partial reports. |
+| 🎛️ **Review before you run** | Choose the model, parallel request limit, depth, and platform. See a workload estimate before starting, then follow progress and reported usage. |
+| 🧩 **Share the AI connection** | [MyOwnLlmIntegrator](https://github.com/Handriantog/My-Own-LLM-Integrator) provides the subscription engine for this app and other local services. |
 | 🔄 **Recover unfinished work** | Checkpoints for graph ingestion, agent preparation, memory saving, and report sections, plus visible retries and manual recovery. |
 | 📄 **Take the report with you** | Markdown and PDF downloads. PDF export renders the saved report locally without another AI call. |
 | 🤝 **Work through your agent** | MCP tools expose the same projects, graphs, simulations, and reports over Streamable HTTP or stdio. |
@@ -111,14 +115,13 @@ The quickstart uses the [Codex CLI](https://learn.chatgpt.com/docs/cli) with you
 
 ### 2. Set up the workbench
 
-Keep `MyOwnLlmIntegrator` beside this repository under `MyOwnStack`. The local
-subscription engine is now an npm dependency; see [the extraction/setup guide](docs/llm-integrator.md).
-If you already cloned the repository for the demo, start with the integrator build below.
+Clone Researcher and install its dependencies. npm downloads the published integrator package; no separate integrator checkout is required:
 
 ```sh
-git clone https://github.com/Handriantog/My-Own-Researcher.git
-cd My-Own-Researcher
-npm ci --prefix ../MyOwnLlmIntegrator
+mkdir -p MyOwnStack
+cd MyOwnStack
+git clone https://github.com/Handriantog/My-Own-Researcher.git MyOwnResearcher
+cd MyOwnResearcher
 npm ci
 npm ci --prefix frontend
 uv sync --project backend --frozen
@@ -126,6 +129,8 @@ uv sync --project graph_platform --frozen
 python3 scripts/configure_local_graph.py
 codex login
 ```
+
+**Updating from the sibling-package setup?** Run `npm ci`, then refresh the engine in both Python environments using the [migration commands](docs/llm-integrator.md#updating-an-existing-checkout). The sibling repository is no longer required.
 
 Choose **Sign in with ChatGPT** during login. The configuration helper creates private credentials in the ignored `.env`, preserves existing secrets and provider selections, and selects local Graphiti storage. Each CLI manages its own login; keep those credentials out of `.env`.
 
@@ -160,34 +165,34 @@ The helper defaults to `LLM_PROVIDER=codex`, preserves an existing selection, ac
 
 ## Start a research run
 
-1. **Bring the context.** Upload a short PDF, Markdown, or text file and describe the question you want to explore.
-2. **Connect the dots.** Build the graph, then prepare the simulation's agents and configuration.
-3. **Set the pace.** Review the round count and choose an effort level before starting:
+1. **Bring the context.** Upload a short PDF, Markdown, or text file on Home and describe the question you want to explore.
+2. **Review the work.** Choose **Review settings** to inspect the connected provider, model, parallel request limit, platform, and estimated token range.
+3. **Set the depth.** Choose how much of the planned simulation to run:
 
-   | Quick | Moderate | Full (default) |
+   | Quick · default for new runs | Moderate | Full |
    | --- | --- | --- |
    | 25% of planned rounds | 50% of planned rounds | 100% of planned rounds |
 
-4. **Watch the discussion.** Let the simulation finish, or choose **Stop simulation** and confirm. Keep the services running while saved activity is added to graph memory.
-5. **Read, question, export.** Generate the report, inspect its evidence and coverage notes, and use **Download PDF**. Continue with agent or report interaction when available.
+4. **Start research.** The backend runs analysis, graph building, agent preparation, simulation, memory saving, and reporting. Follow progress in the browser; closing the page does not stop the run.
+5. **Read, question, export.** Inspect the report's evidence and coverage notes, download Markdown or PDF, and continue with agent or report interaction when available.
 
 > [!TIP]
-> Start with a small source and a few agents. CLI requests are serialized, so larger graphs, more agents, and more rounds take more time and allowance. Effort percentages scale round counts, not total runtime or token consumption.
+> Start with a short source and Quick depth. New runs default to **2 parallel AI requests** and **Reddit**. More parallelism can shorten waiting, but does not reduce the total work. Estimates are workload ranges, not account balances or hard token budgets.
 
 <details>
 <summary><strong>If a run stops or fails</strong></summary>
 
-- **Retries stay visible.** Supported workflow failures receive up to three automatic retries after the initial failure, delayed by 2, 5, and 10 seconds while the browser page is open. Manual recovery remains available.
-- **Checkpoints preserve completed work.** Recovery covers unfinished graph ingestion, agent preparation, memory saving, and report sections. A restarted simulation process begins at round 1; it does not resume an interrupted OASIS process mid-round.
-- **Stopping takes time to finalize.** Saved actions can support a labeled partial report after graph memory finishes saving. Graph finalization and report generation still make AI calls and consume allowance.
+- **Stop research** cancels current work and prevents later stages. Wait for simulation memory to finish saving; **Generate partial report** is an explicit action when usable results exist.
+- **Resume** reuses completed graph, preparation, memory, and report checkpoints. Interrupted simulations restart at round 1 rather than resuming an OASIS process mid-round.
+- **Recovery stays explicit.** After a backend restart, interrupted research does not silently restart inference. Check its status and choose when to continue.
 
-See [setup, storage, and recovery](docs/my-own-researcher.md) for diagnostics and recovery boundaries.
+See [research settings and recovery](docs/research-settings.md) for run controls, or the [workbench guide](docs/my-own-researcher.md) for storage and service diagnostics.
 
 </details>
 
 ## Choose your inference provider
 
-**Codex is the default.** Claude Code, Gemini CLI, Cursor, and 11 other agent CLIs are also available as native presets. Install and sign in to your chosen CLI under the same OS user who runs the app.
+**Codex is the default.** [MyOwnLlmIntegrator](https://github.com/Handriantog/My-Own-LLM-Integrator) supplies all 15 provider adapters, including Claude Code, Gemini CLI, and Cursor. Install and sign in to your chosen CLI under the same OS user who runs the app.
 
 For example, after installing and signing in to Claude Code:
 
@@ -323,10 +328,32 @@ See [per-agent MCP setup](docs/agent-mcp.md) for configuration locations, schema
 | **Local data, remote inference** | Local files and graphs stay on your machine. Inference content goes to the selected CLI's model provider. |
 | **Existing graphs keep their provider** | Changing configuration does not migrate project data. The graph layer covers this app's needs, not the full Zep product. |
 
+## Part of MyOwnStack
+
+**One shared AI connection, useful local services.** MyOwnStack is the umbrella for apps that keep their workspace on your machine and use accounts you already manage.
+
+| Project | Its job |
+| --- | --- |
+| **[MyOwnResearcher](https://github.com/Handriantog/My-Own-Researcher)** | Turn documents and questions into graphs, simulated perspectives, and research reports. |
+| **[MyOwnLlmIntegrator](https://github.com/Handriantog/My-Own-LLM-Integrator)** | Give local apps a reusable npm interface to authenticated agent CLIs. Includes the Python engine, JavaScript API, and provider presets. |
+
+```text
+MyOwnStack/
+└── MyOwnResearcher/
+    └── node_modules/
+        └── myown-llm-integrator/   # Shared engine installed from npm
+```
+
+Researcher owns the research workflow, run settings, concurrency, and usage history. The integrator owns CLI execution, provider response parsing, and process cleanup. The Python services load its engine from the installed npm package. The integrator source repository is only needed when developing the package itself.
+
+Building another local service? Start with the **[integrator quickstart](https://github.com/Handriantog/My-Own-LLM-Integrator#quickstart)**. See [how Researcher integrates it](docs/llm-integrator.md) for the Python dependency layout.
+
 ## Find your next step
 
 | I want to… | Go here |
 | --- | --- |
+| Reuse the subscription engine in another app | [MyOwnLlmIntegrator](https://github.com/Handriantog/My-Own-LLM-Integrator) |
+| Update the shared npm dependency | [Integration guide](docs/llm-integrator.md) |
 | Review models, parallelism, estimates, or automatic research | [Research settings guide](docs/research-settings.md) |
 | Configure storage or recover a run | [Workbench guide](docs/my-own-researcher.md) |
 | Tune the default Codex setup | [Codex provider guide](docs/codex-provider.md) |

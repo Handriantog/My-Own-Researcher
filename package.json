@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "description": "Local research simulations with Codex and Graphiti",
   "scripts": {
-    "setup:integrator": "npm ci --prefix ../MyOwnLlmIntegrator",
-    "setup": "npm run setup:integrator && npm install && cd frontend && npm install",
+    "setup": "npm ci && npm ci --prefix frontend",
     "setup:backend": "cd backend && uv sync",
     "setup:all": "npm run setup && npm run setup:backend && npm run setup:graph",
     "dev": "node scripts/dev.mjs",
@@ -26,6 +25,6 @@
   },
   "license": "AGPL-3.0",
   "dependencies": {
-    "myown-llm-integrator": "file:../MyOwnLlmIntegrator"
+    "myown-llm-integrator": "0.1.0"
   }
 }

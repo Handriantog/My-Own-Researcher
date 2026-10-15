@@ -8,10 +8,9 @@ The graph database, ingestion journal, embeddings, and reranking run locally. La
 
 ## Installation
 
-Requirements: macOS, Linux, or WSL, Node.js 22.12+, uv, Python 3.11–3.12, Docker with Compose, and an installed [Codex CLI](https://learn.chatgpt.com/docs/cli). Docker must be running. Keep the `MyOwnLlmIntegrator` repository beside this checkout; see [shared integration setup](llm-integrator.md). From a checkout of this repository:
+Requirements: macOS, Linux, or WSL, Node.js 22.12+, uv, Python 3.11–3.12, Docker with Compose, and an installed [Codex CLI](https://learn.chatgpt.com/docs/cli). Docker must be running. npm installs the published `myown-llm-integrator` package; no sibling repository is required. See [shared integration setup](llm-integrator.md) for package details and migration from a local checkout. From a checkout of this repository:
 
 ```sh
-npm ci --prefix ../MyOwnLlmIntegrator
 npm ci
 npm ci --prefix frontend
 uv sync --project backend --frozen
