@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#see-it-in-action">See the demo</a> ·
+  <a href="#see-it-in-action">See the app</a> ·
   <a href="#install-and-run">Get started</a> ·
   <a href="#choose-your-inference-provider">Choose your AI</a> ·
   <a href="#use-it-from-another-ai-agent">Connect an agent</a> ·
@@ -41,15 +41,30 @@ An independent fork of **[MiroFish](https://github.com/666ghj/MiroFish)**, licen
 
 ## See it in action
 
-**Meet LoopLunch: one lunch venture, two price points, and a reason to wait.**
+From the first question to a saved report, here's the current desktop interface. These screenshots show different stages of fictional **LoopLunch** and **Daylight** research runs. Select any image to view it at full size.
 
-Should a fictional Singapore office lunch venture charge **S$12**, charge **S$14**, or postpone its pilot? Follow the source brief through a knowledge graph, seven simulated personas, their discussion, and the saved report.
+[![My Own Researcher homepage with an introduction to the research workflow and the LoopLunch example](docs/images/researcher-homepage.jpg)](docs/images/researcher-homepage.jpg)
 
-[![LoopLunch demo showing the research question, three possible decisions, and saved run coverage](docs/images/looplunch-demo.png)](#try-the-demo)
+| Start your research | Connect your AI account |
+| --- | --- |
+| [![Research workspace with document upload, a research question, local graph status, and recent projects](docs/images/researcher-workspace.jpg)](docs/images/researcher-workspace.jpg) | [![AI settings showing a connected Codex account, model selection, parallel requests, and research depth](docs/images/researcher-settings.jpg)](docs/images/researcher-settings.jpg) |
+| Upload source material, ask a question, and return to earlier projects. | Choose your provider, model, parallel request limit, and research depth. |
 
-*Fictional scenario, recorded run: 7 personas · 102 actions · 37 of 336 planned rounds. The report explains that partial coverage.*
+| Follow the run | Explore the knowledge graph |
+| --- | --- |
+| [![Research progress with completed stages, memory-saving progress, a graph, and live activity](docs/images/researcher-run.jpg)](docs/images/researcher-run.jpg) | [![LoopLunch knowledge graph alongside generated entity types, relation types, and completed graph build stages](docs/images/researcher-graph.jpg)](docs/images/researcher-graph.jpg) |
+| Track each stage, inspect activity, and see what the engine is working on. | Inspect entities and relationships alongside the generated ontology. |
+
+| Read the simulated discussion | Review and export the report |
+| --- | --- |
+| [![Completed LoopLunch simulation with a relationship graph, discussion timeline, and round and action totals](docs/images/researcher-simulation.jpg)](docs/images/researcher-simulation.jpg) | [![Completed Daylight report with findings, evidence limits, PDF download, and follow-up controls](docs/images/researcher-report.jpg)](docs/images/researcher-report.jpg) |
+| Browse simulated posts, comments, and reactions with their run context. | Read findings and evidence limits, download a PDF, or ask follow-up questions. |
 
 ### Try the demo
+
+**Meet LoopLunch: one lunch venture, two price points, and a reason to wait.** Should this fictional Singapore office lunch venture charge **S$12**, charge **S$14**, or postpone its pilot? Follow the source brief through a knowledge graph, seven simulated personas, their discussion, and the saved report.
+
+*The bundled demo is a separate recorded run: 7 personas · 102 actions · 37 of 336 planned rounds. Its report explains that partial coverage.*
 
 The demo uses bundled example data. **No backend, Docker, or AI account needed.** With Node.js 22.12+ installed:
 

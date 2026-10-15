@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#看看实际效果">查看演示</a> ·
+  <a href="#看看实际效果">界面预览</a> ·
   <a href="#安装与运行">开始使用</a> ·
   <a href="#选择推理提供方">选择 AI</a> ·
   <a href="#通过其他-ai-助手使用">连接 AI 助手</a> ·
@@ -41,15 +41,30 @@
 
 ## 看看实际效果
 
-**认识 LoopLunch：一个午餐创业计划、两个定价方案，以及暂缓试点的理由。**
+从提出问题到保存报告，下面展示当前的桌面端界面。截图使用英文界面，展示虚构的 **LoopLunch** 和 **Daylight** 研究运行中的不同阶段。点击任意图片即可查看原图。
 
-一家虚构的新加坡办公午餐创业团队，应该定价 **S$12**、定价 **S$14**，还是推迟试点？从原始简报出发，查看知识图谱、7 位模拟参与者、他们的讨论，以及保存下来的报告。
+[![My Own Researcher 首页：研究流程介绍与 LoopLunch 示例](docs/images/researcher-homepage.jpg)](docs/images/researcher-homepage.jpg)
 
-[![LoopLunch 演示：研究问题、三个决策选项与已保存运行的覆盖范围](docs/images/looplunch-demo.png)](#体验演示)
+| 开始研究 | 连接自己的 AI 账号 |
+| --- | --- |
+| [![研究工作区：上传文档、输入研究问题、查看本地图谱状态与最近的项目](docs/images/researcher-workspace.jpg)](docs/images/researcher-workspace.jpg) | [![AI 设置：已连接的 Codex 账号、模型选择、并行请求数与研究深度](docs/images/researcher-settings.jpg)](docs/images/researcher-settings.jpg) |
+| 上传源材料、提出问题，并随时返回之前的项目。 | 选择提供方、模型、并行请求上限和研究深度。 |
 
-*虚构情景，已录制的运行结果：7 位参与者 · 102 次行为 · 完成计划中 336 轮的 37 轮。报告中说明了这一有限覆盖范围。*
+| 跟踪运行进度 | 探索知识图谱 |
+| --- | --- |
+| [![研究进度：已完成的阶段、记忆保存进度、知识图谱与实时活动](docs/images/researcher-run.jpg)](docs/images/researcher-run.jpg) | [![LoopLunch 知识图谱及生成的实体类型、关系类型与已完成的图谱构建阶段](docs/images/researcher-graph.jpg)](docs/images/researcher-graph.jpg) |
+| 跟踪各阶段、查看活动，了解引擎当前正在处理的任务。 | 结合生成的本体结构，查看实体及其关系。 |
+
+| 阅读模拟讨论 | 查看并导出报告 |
+| --- | --- |
+| [![已完成的 LoopLunch 模拟：关系图谱、讨论时间线、轮次与行为总数](docs/images/researcher-simulation.jpg)](docs/images/researcher-simulation.jpg) | [![已完成的 Daylight 报告：研究发现、证据局限、PDF 下载与后续追问入口](docs/images/researcher-report.jpg)](docs/images/researcher-report.jpg) |
+| 浏览模拟帖子、评论和互动，并查看对应的运行信息。 | 阅读研究发现与证据局限、下载 PDF，或继续追问。 |
 
 ### 体验演示
+
+**认识 LoopLunch：一个午餐创业计划、两个定价方案，以及暂缓试点的理由。** 这家虚构的新加坡办公午餐创业团队，应该定价 **S$12**、定价 **S$14**，还是推迟试点？从原始简报出发，查看知识图谱、7 位模拟参与者、他们的讨论，以及保存下来的报告。
+
+*内置演示使用另一份已录制的运行结果：7 位参与者 · 102 次行为 · 完成计划中 336 轮的 37 轮。报告中说明了这一有限覆盖范围。*
 
 演示使用项目内置的示例数据，**无需后端、Docker 或 AI 账号。** 安装 Node.js 22.12+ 后运行：
 
